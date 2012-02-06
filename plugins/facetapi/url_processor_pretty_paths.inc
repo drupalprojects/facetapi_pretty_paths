@@ -17,26 +17,51 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
    */
   protected $pathSegments = array();
 
+  protected $adapter = array();
+
+  function __construct($adapter) {
+    $this->adapter = $adapter;
+  }
+
   /**
    * Implements FacetapiUrlProcessor::fetchParams().
    *
    * Pulls facet params from the $_GET variable.
    */
+
   public function fetchParams() {
-    $params = array('f' => array(), 'q' => $_GET['q']);
-    $args = explode('/', $_GET['q']);
+    // @todo: How to get current search path?
+    $base_path = 'search/job';
+    $query = substr($_GET['q'], strlen($base_path) < strlen($_GET['q']) ? strlen($base_path) + 1 : strlen($base_path));
+    $args = explode('/', $query);
+    //dpm($args);
+
+    $params = array('f' => array(), 'q' => $base_path);
+
     $facets = $this->adapter->getEnabledFacets();
-    while ($term = array_pop($args)) {
-      $tid = array_pop(explode('-', $term));
-      $vocab = array_pop($args);
-      foreach ($facets as $alias => $facet) {
-        if ($facet['label'] == $vocab) {
-          $params['f'][] = $alias . ':' . $tid;
+    while ($value = array_pop($args)) {
+      $alias = array_pop($args);
+
+      foreach ($facets as $facet_alias => $facet) {
+        $facet_settings = $this->adapter->getFacetSettingsGlobal($facet);
+        $pretty_paths_alias = isset($facet_settings->settings['pretty_paths_alias']) ?
+          $facet_settings->settings['pretty_paths_alias'] : $facet['field api name'];
+
+        // Add to params if alias from url matches alias from facet settings.
+        if ($pretty_paths_alias == $alias) {
+          // Taxonomy special case: <alias>/<term-name>-<term-id>
+          $field_info = field_info_field($facet['field api name']);
+          if($field_info['type'] == 'taxonomy_term_reference') {
+            $value = array_pop(explode('-', $value));
+          }
+          $params['f'][] = $alias . ':' . $value;
         }
       }
     }
+    dpm($params['f']);
     return $params;
   }
+
 
   /**
    * Implements FacetapiUrlProcessor::normalizeParams().
@@ -45,46 +70,60 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
    */
   public function normalizeParams(array $params, $filter_key = 'f') {
     // @todo: interpret query path.
-    return drupal_get_query_parameters($params, array('q', 'page'));
+    $ret = drupal_get_query_parameters($params, array('q', 'page'));
+    dpm($ret);
+    return $ret;
   }
 
-  protected function getPathSegment($field, $value) {
-    // Get term & vocabulary info fom field
-    $field_info = field_info_field($field);
-    if($field_info['type'] == 'taxonomy_term_reference') {
+  protected function getPathSegment($facet, $value) {
+    $facet_settings = $this->adapter->getFacetSettingsGlobal($facet);
+    $alias = !empty($facet_settings->settings['pretty_paths_alias']) ?
+      $facet_settings->settings['pretty_paths_alias'] : $facet['field api name'];
 
+    // Default: <alias>/<value>
+    $segment = array(
+      'alias' => $alias,
+      'value' => $value,
+    );
+
+    // Taxonomy special case: <alias>/<term-name>-<term-id>
+    $field_info = field_info_field($facet['field api name']);
+    if($field_info['type'] == 'taxonomy_term_reference') {
       $term = taxonomy_term_load($value);
       $voc = taxonomy_vocabulary_load($term->vid);
-
-      return array(
-        'name' => $voc->name,
-        'value' => $term->name,
-      );
+      $segment['value'] = $term->name . '-' . $term->vid;
     }
+    $segment['key'] = $alias . "_" . $value;
+    return $segment;
   }
 
   public function postProcessFacetBuild(array $facet, array &$build) {
+    if($facet['label'] == 'Required languages') {
+       dpm($facet);
+    }
     foreach ($build as $value => &$item) {
       $segments = $this->pathSegments;
-      $tid = $item['#indexed_value'];
+      $segment = $this->getPathSegment($facet, $item['#indexed_value']);
+
+      if($facet['label'] == 'Required languages') {
+       dpm($item);
+       dpm($segment);
+      }
 
       // Add current facet to path if it is inactive.
       if (!$item['#active']) {
-        $segments[$tid] = $this->getPathSegment($facet['field api name'], $tid);
+        $segments = array_merge($segments, array($segment['key'] => $segment));
+        // Modify paths "alias/value".
+        foreach ($segments as $key => $segment) {
+          $path = '/' . rawurldecode($segment['alias']) .
+            '/' . $this->escapePath($segment['value']);
+          $item['#path'] .= $path;
+        }
       }
       // Remove current facet from url if it is active.
       else {
-        unset($segments[$tid]);
+        unset($segments[$value]);
       }
-
-      // Modify paths "vocabulary/term-name-tid".
-      foreach ($segments as $tid => $segment) {
-        $path = '/' . $this->escapePath($segment['name']) .
-          '/' . $this->escapePath($segment['value']) . '-' . $tid;
-
-        $item['#path'] .= $path;
-      }
-
       // Remove the un-pretty query.
       $item['#query'] = array();
     }
@@ -95,7 +134,6 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
       // Needed, as of http://drupal.org/node/907578#comment-5564008
       require_once(drupal_get_path('module','pathauto').'/pathauto.inc');
       $text = pathauto_cleanstring($text);
-      dpm($text);
     }
     else {
       $text = rawurlencode($text);
