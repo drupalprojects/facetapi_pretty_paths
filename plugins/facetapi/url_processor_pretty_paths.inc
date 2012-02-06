@@ -90,7 +90,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
     if($field_info['type'] == 'taxonomy_term_reference') {
       $term = taxonomy_term_load($value);
       $voc = taxonomy_vocabulary_load($term->vid);
-      $segment['value'] = $term->name . '-' . $term->vid;
+      $segment['value'] = $term->name . '-' . $term->tid;
     }
 
     $segment['key'] = $alias . "_" . $value;
