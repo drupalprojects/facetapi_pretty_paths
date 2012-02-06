@@ -34,7 +34,6 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
     $base_path = 'search/job';
     $query = substr($_GET['q'], strlen($base_path) < strlen($_GET['q']) ? strlen($base_path) + 1 : strlen($base_path));
     $args = explode('/', $query);
-    //dpm($args);
 
     $params = array('f' => array(), 'q' => $base_path);
 
@@ -49,16 +48,18 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
 
         // Add to params if alias from url matches alias from facet settings.
         if ($pretty_paths_alias == $alias) {
+
+          // @todo: Make this pluggable?
           // Taxonomy special case: <alias>/<term-name>-<term-id>
           $field_info = field_info_field($facet['field api name']);
           if($field_info['type'] == 'taxonomy_term_reference') {
             $value = array_pop(explode('-', $value));
           }
-          $params['f'][] = $alias . ':' . $value;
+
+          $params['f'][] = $facet['field api name'] . ':' . $value;
         }
       }
     }
-    dpm($params['f']);
     return $params;
   }
 
@@ -69,10 +70,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
    * Strips the "q" and "page" variables from the params array.
    */
   public function normalizeParams(array $params, $filter_key = 'f') {
-    // @todo: interpret query path.
-    $ret = drupal_get_query_parameters($params, array('q', 'page'));
-    dpm($ret);
-    return $ret;
+    return drupal_get_query_parameters($params, array('q', 'page'));
   }
 
   protected function getPathSegment($facet, $value) {
@@ -86,6 +84,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
       'value' => $value,
     );
 
+    // @todo: Make this pluggable?
     // Taxonomy special case: <alias>/<term-name>-<term-id>
     $field_info = field_info_field($facet['field api name']);
     if($field_info['type'] == 'taxonomy_term_reference') {
@@ -93,22 +92,15 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
       $voc = taxonomy_vocabulary_load($term->vid);
       $segment['value'] = $term->name . '-' . $term->vid;
     }
+
     $segment['key'] = $alias . "_" . $value;
     return $segment;
   }
 
   public function postProcessFacetBuild(array $facet, array &$build) {
-    if($facet['label'] == 'Required languages') {
-       dpm($facet);
-    }
     foreach ($build as $value => &$item) {
       $segments = $this->pathSegments;
       $segment = $this->getPathSegment($facet, $item['#indexed_value']);
-
-      if($facet['label'] == 'Required languages') {
-       dpm($item);
-       dpm($segment);
-      }
 
       // Add current facet to path if it is inactive.
       if (!$item['#active']) {
