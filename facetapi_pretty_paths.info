@@ -1,0 +1,8 @@
+name = Pretty Paths for Facet API
+core = 7.x
+
+dependencies[] = facetapi
+package = Search Toolkit
+
+files[] = plugins/facetapi/url_processor_pretty_paths.inc
+
