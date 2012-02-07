@@ -64,6 +64,33 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
     return $params;
   }
 
+  /**
+   * Implements FacetapiUrlProcessor::getQueryString().
+   */
+  public function getQueryString(array $facet, array $values, $active) {
+    $qstring = $this->params;
+    $active_items = $this->adapter->getActiveItems($facet);
+
+    // Appends to qstring if inactive, removes if active.
+    foreach ($values as $value) {
+      if ($active && isset($active_items[$value])) {
+        // Add pretty path segment to segments array.
+        $segment = $this->getPathSegment($facet, $value);
+        $this->pathSegments = array_merge($this->pathSegments, array($segment['key'] => $segment));
+        unset($qstring[$this->filterKey][$active_items[$value]['pos']]);
+      }
+      elseif (!$active) {
+        $field_alias = rawurlencode($facet['field alias']);
+        $qstring[$this->filterKey][] = $field_alias . ':' . $value;
+      }
+    }
+
+    // Removes duplicates, resets array keys and returns query string.
+    // @see http://drupal.org/node/1340528
+    $qstring[$this->filterKey] = array_values(array_unique($qstring[$this->filterKey]));
+    return array_filter($qstring);
+  }
+
   protected function getPathSegment($facet, $value) {
     $pretty_paths_alias = $this->getFacetPrettyPathsAlias($facet);
 
@@ -94,16 +121,18 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
       // Add current facet to path if it is inactive.
       if (!$item['#active']) {
         $segments = array_merge($segments, array($segment['key'] => $segment));
-        // Modify paths "alias/value".
-        foreach ($segments as $key => $segment) {
-          $item['#path'] .= '/' . $segment['alias'] .
-            '/' . $segment['value'];
-        }
       }
       // Remove current facet from url if it is active.
       else {
-        unset($segments[$value]);
+        unset($segments[$segment['key']]);
       }
+
+      // Modify paths "alias/value".
+      foreach ($segments as $key => $segment) {
+        $item['#path'] .= '/' . $segment['alias'] .
+          '/' . $segment['value'];
+      }
+
       // Remove the un-pretty query.
       // @todo: This might remove fulltext search params...
       $item['#query'] = array();
@@ -120,13 +149,16 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
   }
 
   /**
-   * Returns the pretty_paths_alias for a given facet which defaults to the facet_name.
+   * Returns the pretty_paths_alias for a given facet.
+   *
+   * If there is no custom pretty_paths_alias settings, in will default
+   * to rawurlencode($facet['field alias']).
    */
   public function getFacetPrettyPathsAlias(array $facet) {
     $facet_settings = $this->adapter->getFacetSettingsGlobal($facet);
     // Path alias defaults to facet_name.
     return !empty($facet_settings->settings['pretty_paths_alias']) ?
-      $facet_settings->settings['pretty_paths_alias'] : $facet['name'];
+      $facet_settings->settings['pretty_paths_alias'] : rawurlencode($facet['field alias']);
   }
 
 }
