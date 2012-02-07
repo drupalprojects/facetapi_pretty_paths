@@ -46,7 +46,14 @@ function facetapi_pretty_paths_form_facetapi_facet_display_form_alter(&$form, &$
     '#type' => 'textfield',
     '#title' => t('Pretty path alias'),
     '#default_value' => $alias,
-    '#description' => t('Pretty paths will be generated in the following way: &quot;&lt;alias&gt;/&lt;value&gt;&quot;. ' .
-      'For taxonomy terms it outputs the id as well: &quot;&lt;alias&gt;/&lt;term-name&gt;-&lt;term-id&gt;&quot;.'),
+    '#description' => t(
+      'Pretty paths will be generated as "search/url/segment1/segment2/".<br/>' .
+      'By default, a segment will look like: "@default_url".<br/>' .
+      'For taxonomy terms it outputs the id as well: "@taxonomy_url".',
+      array(
+        '@default_segments' => '<alias>/<value>',
+        '@taxonomy_url' => '<alias>/<term-name>-<term-id>'
+      )
+    ),
   );
 }

@@ -32,12 +32,15 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
   public function fetchParams() {
     // @todo: How to get current search path?
     $base_path = 'search/job';
+    // @todo: use regex?
     $query = substr($_GET['q'], strlen($base_path) < strlen($_GET['q']) ? strlen($base_path) + 1 : strlen($base_path));
     $args = explode('/', $query);
 
+    //@todo: add old params?
     $params = array('f' => array(), 'q' => $base_path);
 
     $facets = $this->adapter->getEnabledFacets();
+
     while ($value = array_pop($args)) {
       $alias = array_pop($args);
 
@@ -52,7 +55,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
           // @todo: Make this pluggable?
           // Taxonomy special case: <alias>/<term-name>-<term-id>
           $field_info = field_info_field($facet['field api name']);
-          if($field_info['type'] == 'taxonomy_term_reference') {
+          if ($field_info['type'] == 'taxonomy_term_reference') {
             $value = array_pop(explode('-', $value));
           }
 
@@ -61,16 +64,6 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
       }
     }
     return $params;
-  }
-
-
-  /**
-   * Implements FacetapiUrlProcessor::normalizeParams().
-   *
-   * Strips the "q" and "page" variables from the params array.
-   */
-  public function normalizeParams(array $params, $filter_key = 'f') {
-    return drupal_get_query_parameters($params, array('q', 'page'));
   }
 
   protected function getPathSegment($facet, $value) {
@@ -87,7 +80,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
     // @todo: Make this pluggable?
     // Taxonomy special case: <alias>/<term-name>-<term-id>
     $field_info = field_info_field($facet['field api name']);
-    if($field_info['type'] == 'taxonomy_term_reference') {
+    if ($field_info['type'] == 'taxonomy_term_reference') {
       $term = taxonomy_term_load($value);
       $voc = taxonomy_vocabulary_load($term->vid);
       $segment['value'] = $term->name . '-' . $term->tid;
@@ -107,9 +100,9 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
         $segments = array_merge($segments, array($segment['key'] => $segment));
         // Modify paths "alias/value".
         foreach ($segments as $key => $segment) {
-          $path = '/' . rawurldecode($segment['alias']) .
+          // @todo: doc rawurldecode vs escapePath
+          $item['#path'] = '/' . rawurldecode($segment['alias']) .
             '/' . $this->escapePath($segment['value']);
-          $item['#path'] .= $path;
         }
       }
       // Remove current facet from url if it is active.
@@ -117,6 +110,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
         unset($segments[$value]);
       }
       // Remove the un-pretty query.
+      // @todo: This might remove fulltext search params...
       $item['#query'] = array();
     }
   }
