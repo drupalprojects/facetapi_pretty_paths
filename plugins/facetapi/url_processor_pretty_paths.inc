@@ -31,13 +31,15 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
 
   public function fetchParams() {
     // @todo: How to get current search path?
-    $base_path = 'search/job';
+    //$base_path = 'search/job';
     // @todo: use regex?
-    $query = substr($_GET['q'], strlen($base_path) < strlen($_GET['q']) ? strlen($base_path) + 1 : strlen($base_path));
+    //$query = substr($_GET['q'], strlen($base_path) < strlen($_GET['q']) ? strlen($base_path) + 1 : strlen($base_path));
+
+    $query = $_GET['q'];
     $args = explode('/', $query);
 
     //@todo: add old params?
-    $params = array('f' => array(), 'q' => $base_path);
+    $params = array('f' => array(), 'q' => $query);
 
     $facets = $this->adapter->getEnabledFacets();
 
