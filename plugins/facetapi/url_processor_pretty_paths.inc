@@ -79,7 +79,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
     if ($field_info['type'] == 'taxonomy_term_reference') {
       $term = taxonomy_term_load($value);
       $voc = taxonomy_vocabulary_load($term->vid);
-      $segment['value'] = $term->name . '-' . $term->tid;
+      $segment['value'] = $this->prettyPath($term->name) . '-' . $term->tid;
     }
 
     $segment['key'] = $pretty_paths_alias . "_" . $value;
@@ -96,9 +96,8 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
         $segments = array_merge($segments, array($segment['key'] => $segment));
         // Modify paths "alias/value".
         foreach ($segments as $key => $segment) {
-          // @todo: doc rawurldecode vs escapePath
-          $item['#path'] = '/' . rawurldecode($segment['alias']) .
-            '/' . $this->escapePath($segment['value']);
+          $item['#path'] .= '/' . $segment['alias'] .
+            '/' . $segment['value'];
         }
       }
       // Remove current facet from url if it is active.
@@ -111,14 +110,11 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
     }
   }
 
-  protected function escapePath($text) {
+  protected function prettyPath($text) {
     if (module_exists('pathauto')) {
       // Needed, as of http://drupal.org/node/907578#comment-5564008
       require_once(drupal_get_path('module','pathauto').'/pathauto.inc');
-      $text = pathauto_cleanstring($text);
-    }
-    else {
-      $text = rawurlencode($text);
+      return pathauto_cleanstring($text);
     }
     return $text;
   }
@@ -130,7 +126,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
     $facet_settings = $this->adapter->getFacetSettingsGlobal($facet);
     // Path alias defaults to facet_name.
     return !empty($facet_settings->settings['pretty_paths_alias']) ?
-      $facet_settings->settings['pretty_paths_alias'] : "";
+      $facet_settings->settings['pretty_paths_alias'] : $facet['name'];
   }
 
 }
