@@ -30,22 +30,19 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
    */
 
   public function fetchParams() {
-    // @todo: How to get current search path?
-    //$base_path = 'search/job';
-    // @todo: use regex?
-    //$query = substr($_GET['q'], strlen($base_path) < strlen($_GET['q']) ? strlen($base_path) + 1 : strlen($base_path));
+    $params = $_GET;
 
-    $query = $_GET['q'];
-    $args = explode('/', $query);
-
-    //@todo: add old params?
-    $params = array('f' => array(), 'q' => $query);
+    // Pretty paths are expected to be in form "search/url/segment1/segment2/".
+    // @todo: Logic to remove /search/url part from args.
+    $args = explode('/', $_GET['q']);
 
     $facets = $this->adapter->getEnabledFacets();
 
+    // Traverse all segments ("<alias>/<value>") from right to left using array_pop.
     while ($value = array_pop($args)) {
       $alias = array_pop($args);
 
+      // Look for matching facet.
       foreach ($facets as $facet_alias => $facet) {
         $pretty_paths_alias = $this->getFacetPrettyPathsAlias($facet);
 
@@ -67,57 +64,78 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
   }
 
   /**
-   * Implements FacetapiUrlProcessor::getQueryString().
+   *  Returns the query string variables for a facet item.
+   *
+   *  Don't manipulate query params at all, as pretty paths are path-driven.
+   *  Instead, calculate the resulting pathSegments and store them,
+   *  so they can be processed in postProcessFacetBuild.
+   *
+   *  Implements FacetapiUrlProcessor::getQueryString().
    */
   public function getQueryString(array $facet, array $values, $active) {
-    $qstring = $this->params;
-    $active_items = $this->adapter->getActiveItems($facet);
+    $this->calculatePathSegments($facet, $values, $active);
+    return $this->params;
+  }
 
-    // Appends to qstring if inactive, removes if active.
+  public function postProcessFacetBuild(array $facet, array &$build) {
+    foreach ($build as $value => &$item) {
+      $this->postProcessItem($facet, $item);
+    }
+  }
+
+  /**
+   * Post-processes a facet link item for pretty paths output.
+   *
+   * Rewrite its path, so it contains pretty facet paths,
+   * but remove the default 'f=' query params.
+   */
+  protected function postProcessItem(array $facet, array &$item) {
+    $segment = $this->getPathSegment($facet, $item['#indexed_value']);
+    $path_segment = '/' . $segment['alias'] . '/' . $segment['value'];
+
+    // Add current facet to path if it is inactive.
+    if (!$item['#active']) {
+      if (strpos($item['#path'], $path_segment) === FALSE) {
+        $item['#path'] .= $path_segment;
+      }
+    }
+    // Remove current facet from url if it is active.
+    else {
+      $pos = strpos($item['#path'], $path_segment);
+      if ($pos !== FALSE) {
+        $item['#path'] = str_replace($path_segment, "", $item['#path']);
+      }
+    }
+
+    // Remove filter query params.
+    $item['#query']['f'] = array();
+
+    // Recursively postProcess children, if available.
+    if (!empty($item['#item_children'])) {
+      foreach ($item['#item_children'] as &$child) {
+        $this->postProcessItem($facet, $child);
+      }
+    }
+  }
+
+  /**
+   *  Calculate pathSegments and store them,
+   *  so they can be processed in postProcessFacetBuild.
+   */
+  protected function calculatePathSegments(array $facet, array $values, $active) {
+    $active_items = $this->adapter->getActiveItems($facet);
     foreach ($values as $value) {
       if ($active && isset($active_items[$value])) {
         // Add pretty path segment to segments array.
         $segment = $this->getPathSegment($facet, $value);
         $this->pathSegments = array_merge($this->pathSegments, array($segment['key'] => $segment));
-        unset($qstring[$this->filterKey][$active_items[$value]['pos']]);
       }
-      elseif (!$active) {
-        $field_alias = rawurlencode($facet['field alias']);
-        $qstring[$this->filterKey][] = $field_alias . ':' . $value;
-      }
-    }
-
-    // Removes duplicates, resets array keys and returns query string.
-    // @see http://drupal.org/node/1340528
-    $qstring[$this->filterKey] = array_values(array_unique($qstring[$this->filterKey]));
-    return array_filter($qstring);
-  }
-
-  public function postProcessFacetBuild(array $facet, array &$build) {
-    foreach ($build as $value => &$item) {
-      $segment = $this->getPathSegment($facet, $item['#indexed_value']);
-      $path_segment = '/' . $segment['alias'] . '/' . $segment['value'];
-
-      // Add current facet to path if it is inactive.
-      if (!$item['#active']) {
-        if (strpos($item['#path'], $path_segment) === FALSE) {
-          $item['#path'] .= $path_segment;
-        }
-      }
-      // Remove current facet from url if it is active.
-      else {
-        $pos = strpos($item['#path'], $path_segment);
-        if ($pos !== FALSE) {
-          $item['#path'] = str_replace($path_segment, "", $item['#path']);
-        }
-      }
-
-      // Remove the un-pretty query.
-      // @todo: This might remove fulltext search params...
-      $item['#query'] = array();
     }
   }
 
+  /**
+   * Generate a path segement for a given facet + value.
+   */
   protected function getPathSegment($facet, $value) {
     $pretty_paths_alias = $this->getFacetPrettyPathsAlias($facet);
 
@@ -140,6 +158,9 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
     return $segment;
   }
 
+  /**
+   * Convert a given text to a pretty path using pathauto, if available.
+   */
   protected function prettyPath($text) {
     // @todo: Make this pluggable?
     if (module_exists('pathauto')) {
