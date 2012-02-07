@@ -35,17 +35,15 @@ function facetapi_pretty_paths_facetapi_searcher_info_alter(array &$searcher_inf
 function facetapi_pretty_paths_form_facetapi_facet_display_form_alter(&$form, &$form_state, $form_id) {
   // Get global facet settings.
   $adapter = $form['#facetapi']['adapter'];
-  $facet_settings = $adapter->getFacetSettingsGlobal($form['#facetapi']['facet']);
+  $processor = new FacetapiUrlProcessorPrettyPaths($adapter);
+  $pretty_paths_alias = $processor->getFacetPrettyPathsAlias($form['#facetapi']['facet']);
 
-  // Path alias defaults to field_api_name.
-  $alias = isset($facet_settings->settings['pretty_paths_alias']) ?
-    $facet_settings->settings['pretty_paths_alias'] : $form['#facetapi']['facet']['field api name'];
 
   // Add pretty paths alias option to global facet settings.
   $form['global']['pretty_paths_alias'] = array(
     '#type' => 'textfield',
     '#title' => t('Pretty path alias'),
-    '#default_value' => $alias,
+    '#default_value' => $pretty_paths_alias,
     '#description' => t(
       'Pretty paths will be generated as "search/url/segment1/segment2/".<br/>' .
       'By default, a segment will look like: "@default_url".<br/>' .

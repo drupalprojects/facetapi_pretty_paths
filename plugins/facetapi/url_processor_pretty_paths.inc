@@ -45,9 +45,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
       $alias = array_pop($args);
 
       foreach ($facets as $facet_alias => $facet) {
-        $facet_settings = $this->adapter->getFacetSettingsGlobal($facet);
-        $pretty_paths_alias = isset($facet_settings->settings['pretty_paths_alias']) ?
-          $facet_settings->settings['pretty_paths_alias'] : $facet['field api name'];
+        $pretty_paths_alias = $this->getFacetPrettyPathsAlias($facet);
 
         // Add to params if alias from url matches alias from facet settings.
         if ($pretty_paths_alias == $alias) {
@@ -67,13 +65,11 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
   }
 
   protected function getPathSegment($facet, $value) {
-    $facet_settings = $this->adapter->getFacetSettingsGlobal($facet);
-    $alias = !empty($facet_settings->settings['pretty_paths_alias']) ?
-      $facet_settings->settings['pretty_paths_alias'] : $facet['field api name'];
+    $pretty_paths_alias = $this->getFacetPrettyPathsAlias($facet);
 
     // Default: <alias>/<value>
     $segment = array(
-      'alias' => $alias,
+      'alias' => $pretty_paths_alias,
       'value' => $value,
     );
 
@@ -86,7 +82,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
       $segment['value'] = $term->name . '-' . $term->tid;
     }
 
-    $segment['key'] = $alias . "_" . $value;
+    $segment['key'] = $pretty_paths_alias . "_" . $value;
     return $segment;
   }
 
@@ -125,6 +121,16 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
       $text = rawurlencode($text);
     }
     return $text;
+  }
+
+  /**
+   * Returns the pretty_paths_alias for a given facet which defaults to the facet_name.
+   */
+  public function getFacetPrettyPathsAlias(array $facet) {
+    $facet_settings = $this->adapter->getFacetSettingsGlobal($facet);
+    // Path alias defaults to facet_name.
+    return !empty($facet_settings->settings['pretty_paths_alias']) ?
+      $facet_settings->settings['pretty_paths_alias'] : "";
   }
 
 }
