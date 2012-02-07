@@ -91,6 +91,31 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
     return array_filter($qstring);
   }
 
+  public function postProcessFacetBuild(array $facet, array &$build) {
+    foreach ($build as $value => &$item) {
+      $segment = $this->getPathSegment($facet, $item['#indexed_value']);
+      $path_segment = '/' . $segment['alias'] . '/' . $segment['value'];
+
+      // Add current facet to path if it is inactive.
+      if (!$item['#active']) {
+        if (strpos($item['#path'], $path_segment) === FALSE) {
+          $item['#path'] .= $path_segment;
+        }
+      }
+      // Remove current facet from url if it is active.
+      else {
+        $pos = strpos($item['#path'], $path_segment);
+        if ($pos !== FALSE) {
+          $item['#path'] = str_replace($path_segment, "", $item['#path']);
+        }
+      }
+
+      // Remove the un-pretty query.
+      // @todo: This might remove fulltext search params...
+      $item['#query'] = array();
+    }
+  }
+
   protected function getPathSegment($facet, $value) {
     $pretty_paths_alias = $this->getFacetPrettyPathsAlias($facet);
 
@@ -111,32 +136,6 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
 
     $segment['key'] = $pretty_paths_alias . "_" . $value;
     return $segment;
-  }
-
-  public function postProcessFacetBuild(array $facet, array &$build) {
-    foreach ($build as $value => &$item) {
-      $segments = $this->pathSegments;
-      $segment = $this->getPathSegment($facet, $item['#indexed_value']);
-
-      // Add current facet to path if it is inactive.
-      if (!$item['#active']) {
-        $segments = array_merge($segments, array($segment['key'] => $segment));
-      }
-      // Remove current facet from url if it is active.
-      else {
-        unset($segments[$segment['key']]);
-      }
-
-      // Modify paths "alias/value".
-      foreach ($segments as $key => $segment) {
-        $item['#path'] .= '/' . $segment['alias'] .
-          '/' . $segment['value'];
-      }
-
-      // Remove the un-pretty query.
-      // @todo: This might remove fulltext search params...
-      $item['#query'] = array();
-    }
   }
 
   protected function prettyPath($text) {
