@@ -56,7 +56,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
             $value = array_pop(explode('-', $value));
           }
 
-          $params['f'][] = $facet['field api name'] . ':' . $value;
+          $params['f'][] = $facet['field alias'] . ':' . $value;
         }
       }
     }
