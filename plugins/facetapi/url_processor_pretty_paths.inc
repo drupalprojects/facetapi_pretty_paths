@@ -51,12 +51,11 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
 
           // @todo: Make this pluggable?
           // Taxonomy special case: <alias>/<term-name>-<term-id>
-          $field_info = field_info_field($facet['field api name']);
-          if ($field_info['type'] == 'taxonomy_term_reference') {
+          if ($facet['field type'] == 'taxonomy_term') {
             $value = array_pop(explode('-', $value));
           }
 
-          $params['f'][] = $facet['field alias'] . ':' . $value;
+          $params['f'][] = $alias . ':' . $value;
         }
       }
     }
@@ -147,8 +146,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
 
     // @todo: Make this pluggable?
     // Taxonomy special case: <alias>/<term-name>-<term-id>
-    $field_info = field_info_field($facet['field api name']);
-    if ($field_info['type'] == 'taxonomy_term_reference') {
+    if ($facet['field type'] == 'taxonomy_term') {
       $term = taxonomy_term_load($value);
       $voc = taxonomy_vocabulary_load($term->vid);
       $segment['value'] = $this->prettyPath($term->name) . '-' . $term->tid;
