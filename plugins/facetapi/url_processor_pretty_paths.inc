@@ -106,7 +106,21 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
     }
   }
 
-  public function postProcessFacetBuild(array $facet, array &$build) {
+  public function postProcess($type, array &$args) {
+    // @todo: There might be better ways to handle this, plugins?
+    switch ($type) {
+      case 'facet':
+        $this->postProcessFacetBuild($args['facet'], &$args['build']);
+        break;
+
+      case 'current_search': {
+        $this->postProcessCurrentSearchItem(&$args['variables'], $args['item']);
+        break;
+      }
+    }
+  }
+
+  protected function postProcessFacetBuild(array $facet, array &$build) {
     foreach ($build as $value => &$item) {
       $this->postProcessItem($facet, $item);
     }
@@ -143,20 +157,56 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
       $mySegments = array_merge($mySegments, array($segment['key'] => $segment));
     }
 
-    // Sort to avoid multiple urls with duplicate content.
-    ksort($mySegments);
-
     // Construct facet path.
-    $item['#path'] = $this->basePath;
-    foreach ($mySegments as $key => $segment) {
-      $item['#path'] .=  '/' . $segment['alias'] . '/' . $segment['value'];
-    }
+    $item['#path'] = $this->constructPath($mySegments);
 
     // Remove filter query params.
     $item['#query']['f'] = array();
   }
 
+  protected function postProcessCurrentSearchItem(array &$variables, array $item) {
+    // Unset current search item.
+    $facet_name = $item['facets'][0];
+    $facet = $this->adapter->getFacet(array('name' => $facet_name));
+    $processor = $this->adapter->getProcessor($facet_name);
+    $build = $processor->getBuild();
+    $segment = $this->getPathSegment($facet->getFacet(), $item['value']);
+
+    // Construct item path.
+    $path = $this->postProcessCurrentSearchItemChild($facet->getFacet(), $build, $item['value']);
+    $variables['path'] = $path;
+
+    // Remove filter query params.
+    $variables['options']['query']['f'] = array();
+  }
+
+  protected function postProcessCurrentSearchItemChild(array $facet, array $build, $value) {
+    foreach ($build as $item_value => &$item) {
+      if ($value == $item_value) {
+        $this->postProcessItem($facet, &$item);
+        return $item['#path'];
+      }
+      if (!empty($item['#item_children'])) {
+        $path = $this->postProcessCurrentSearchItemChild($facet, $item['#item_children'], $value);
+        if ($path !== NULL) {
+          return $path;
+        }
+      }
+    }
+    return NULL;
+  }
+
   /* ### Generic helpers ### */
+
+  protected function constructPath(array $segments) {
+    // Sort to avoid multiple urls with duplicate content.
+    ksort($segments);
+    $path = $this->basePath;
+    foreach ($segments as $key => $segment) {
+      $path .=  '/' . $segment['alias'] . '/' . $segment['value'];
+    }
+    return $path;
+  }
 
   /**
    * Generate a path segement for a given facet + value.
