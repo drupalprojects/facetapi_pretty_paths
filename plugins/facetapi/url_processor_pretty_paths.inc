@@ -163,7 +163,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
     // @todo: Make this pluggable?
     if (module_exists('pathauto')) {
       // Needed, as of http://drupal.org/node/907578#comment-5564008
-      require_once(drupal_get_path('module','pathauto').'/pathauto.inc');
+      require_once drupal_get_path('module', 'pathauto') . '/pathauto.inc';
       return pathauto_cleanstring($text);
     }
     return $text;
