@@ -76,6 +76,21 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
     return $this->params;
   }
 
+  /**
+   *  Calculate pathSegments and store them,
+   *  so they can be processed in postProcessFacetBuild.
+   */
+  protected function calculatePathSegments(array $facet, array $values, $active) {
+    $active_items = $this->adapter->getActiveItems($facet);
+    foreach ($values as $value) {
+      if ($active && isset($active_items[$value])) {
+        // Add pretty path segment to segments array.
+        $segment = $this->getPathSegment($facet, $value);
+        $this->pathSegments = array_merge($this->pathSegments, array($segment['key'] => $segment));
+      }
+    }
+  }
+
   public function postProcessFacetBuild(array $facet, array &$build) {
     foreach ($build as $value => &$item) {
       $this->postProcessItem($facet, $item);
@@ -117,20 +132,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
     }
   }
 
-  /**
-   *  Calculate pathSegments and store them,
-   *  so they can be processed in postProcessFacetBuild.
-   */
-  protected function calculatePathSegments(array $facet, array $values, $active) {
-    $active_items = $this->adapter->getActiveItems($facet);
-    foreach ($values as $value) {
-      if ($active && isset($active_items[$value])) {
-        // Add pretty path segment to segments array.
-        $segment = $this->getPathSegment($facet, $value);
-        $this->pathSegments = array_merge($this->pathSegments, array($segment['key'] => $segment));
-      }
-    }
-  }
+  /* ### Generic helpers ### */
 
   /**
    * Generate a path segement for a given facet + value.
