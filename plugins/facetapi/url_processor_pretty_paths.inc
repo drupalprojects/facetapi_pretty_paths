@@ -17,6 +17,11 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
    */
   protected $pathSegments = array();
 
+  /**
+   * The real search base path, without search parameter segments.
+   */
+  protected $basePath;
+
   protected $adapter = array();
 
   function __construct($adapter) {
@@ -31,6 +36,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
 
   public function fetchParams() {
     $params = $_GET;
+    $base_path = $_GET['q'];
 
     // Pretty paths are expected to be in form "search/url/segment1/segment2/".
     // @todo: Logic to remove /search/url part from args.
@@ -38,9 +44,10 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
 
     $facets = $this->adapter->getEnabledFacets();
 
-    // Traverse all segments ("<alias>/<value>") from right to left using array_pop.
+    // Traverse all segments "<alias>/<value>" from right to left (array_pop).
     while ($value = array_pop($args)) {
       $alias = array_pop($args);
+      $found = FALSE;
 
       // Look for matching facet.
       foreach ($facets as $facet_alias => $facet) {
@@ -48,6 +55,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
 
         // Add to params if alias from url matches alias from facet settings.
         if ($pretty_paths_alias == $alias) {
+          $found = TRUE;
 
           // @todo: Make this pluggable?
           // Taxonomy special case: <alias>/<term-name>-<term-id>
@@ -58,7 +66,14 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
           $params['f'][] = $alias . ':' . $value;
         }
       }
+      // When no more facet path segments have been,
+      // we assume the rest of the url as the search basePath.
+      if (!$found) {
+        array_push($args, $alias, $value);
+        break;
+      }
     }
+    $this->basePath = implode('/', $args);
     return $params;
   }
 
@@ -103,33 +118,42 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
    * Rewrite its path, so it contains pretty facet paths,
    * but remove the default 'f=' query params.
    */
-  protected function postProcessItem(array $facet, array &$item) {
+  protected function postProcessItem(array $facet, array &$item, array &$segments = NULL) {
+    // Get all currently active path segments so that they are
+    // combined with this facet item.
+    $segments = $segments === NULL ? $this->pathSegments : $segments;
     $segment = $this->getPathSegment($facet, $item['#indexed_value']);
-    $path_segment = '/' . $segment['alias'] . '/' . $segment['value'];
 
+    // Remove current facet from url if it is active.
+    if ($item['#active']) {
+      // Recursively process children, if available.
+      // If an active parent is de-selected, all its active children are, too.
+      if (!empty($item['#item_children'])) {
+        foreach ($item['#item_children'] as &$child) {
+          $this->postProcessItem($facet, $child, $segments);
+        }
+      }
+      unset($segments[$segment['key']]);
+    }
+
+    // Make a local copy as additional segments shouldn't be propagated to parents.
+    $mySegments = $segments;
     // Add current facet to path if it is inactive.
     if (!$item['#active']) {
-      if (strpos($item['#path'], $path_segment) === FALSE) {
-        $item['#path'] .= $path_segment;
-      }
+      $mySegments = array_merge($mySegments, array($segment['key'] => $segment));
     }
-    // Remove current facet from url if it is active.
-    else {
-      $pos = strpos($item['#path'], $path_segment);
-      if ($pos !== FALSE) {
-        $item['#path'] = str_replace($path_segment, "", $item['#path']);
-      }
+
+    // Sort to avoid multiple urls with duplicate content.
+    ksort($mySegments);
+
+    // Construct facet path.
+    $item['#path'] = $this->basePath;
+    foreach ($mySegments as $key => $segment) {
+      $item['#path'] .=  '/' . $segment['alias'] . '/' . $segment['value'];
     }
 
     // Remove filter query params.
     $item['#query']['f'] = array();
-
-    // Recursively postProcess children, if available.
-    if (!empty($item['#item_children'])) {
-      foreach ($item['#item_children'] as &$child) {
-        $this->postProcessItem($facet, $child);
-      }
-    }
   }
 
   /* ### Generic helpers ### */
