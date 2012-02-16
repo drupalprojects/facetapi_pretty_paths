@@ -36,6 +36,13 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
     // @todo: Logic to remove /search/url part from args.
     $args = explode('/', $_GET['q']);
 
+    // Skip pretty paths logic for admin pages, as
+    // for pretty paths, we have to manipulate $_GET['q].
+    // @todo: Fix this workaround?
+    if ($args[0] == 'admin') {
+      return $_GET;
+    }
+
     $facets = $this->adapter->getEnabledFacets();
 
     // Traverse all segments "<alias>/<value>" from right to left (array_pop).
