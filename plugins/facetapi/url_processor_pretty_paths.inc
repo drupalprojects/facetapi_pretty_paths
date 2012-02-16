@@ -191,7 +191,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
     $variables['path'] = $path;
 
     // Remove filter query params.
-    $variables['options']['query']['f'] = array();
+    unset($variables['options']['query']['f']);
   }
 
   /**
