@@ -175,7 +175,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
     $item['#path'] = $this->constructPath($item['#path'], $mySegments);
 
     // Remove filter query params.
-    $item['#query']['f'] = array();
+    unset($item['#query']['f']);
   }
 
   protected function postProcessCurrentSearchItem(array &$variables, array $item) {
