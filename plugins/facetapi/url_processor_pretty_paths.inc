@@ -143,6 +143,9 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
    * but remove the default 'f=' query params.
    */
   protected function postProcessItem(array $facet, array &$item, array &$segments = NULL) {
+    if (isset($item['#pretty_paths_processed'])) {
+      return;
+    }
     // Get all currently active path segments so that they are
     // combined with this facet item.
     $segments = $segments === NULL ? $this->pathSegments : $segments;
@@ -158,6 +161,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
         }
       }
       unset($segments[$segment['key']]);
+      $item['#pretty_paths_processed'] = TRUE;
     }
 
     // Make a local copy as additional segments shouldn't be propagated to parents.
@@ -183,21 +187,24 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
     $segment = $this->getPathSegment($facet->getFacet(), $item['value']);
 
     // Construct item path.
-    $path = $this->postProcessCurrentSearchItemChild($facet->getFacet(), $build, $item['value']);
+    $path = $this->postProcessCurrentSearchItemChild($facet->getFacet(), $build, $item);
     $variables['path'] = $path;
 
     // Remove filter query params.
     $variables['options']['query']['f'] = array();
   }
 
-  protected function postProcessCurrentSearchItemChild(array $facet, array $build, $value) {
-    foreach ($build as $item_value => &$item) {
-      if ($value == $item_value) {
-        $this->postProcessItem($facet, &$item);
-        return $item['#path'];
+  /**
+   * Find the item in the hierarchical $build array to process the path correctly.
+   */
+  protected function postProcessCurrentSearchItemChild(array $facet, array $build, array $item) {
+    foreach ($build as $child_value => &$child) {
+      if ($item['value'] == $child_value) {
+        $this->postProcessItem($facet, &$child);
+        return $child['#path'];
       }
-      if (!empty($item['#item_children'])) {
-        $path = $this->postProcessCurrentSearchItemChild($facet, $item['#item_children'], $value);
+      if (!empty($child['#item_children'])) {
+        $path = $this->postProcessCurrentSearchItemChild($facet, $child['#item_children'], $item);
         if ($path !== NULL) {
           return $path;
         }
