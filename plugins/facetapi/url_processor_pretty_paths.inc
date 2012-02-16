@@ -17,11 +17,6 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
    */
   protected $pathSegments = array();
 
-  /**
-   * The real search base path, without search parameter segments.
-   */
-  protected $basePath;
-
   protected $adapter = array();
 
   function __construct($adapter) {
@@ -35,8 +30,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
    */
 
   public function fetchParams() {
-    $params = $_GET;
-    $base_path = $_GET['q'];
+    $params = array();
 
     // Pretty paths are expected to be in form "search/url/segment1/segment2/".
     // @todo: Logic to remove /search/url part from args.
@@ -63,7 +57,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
             $value = array_pop(explode('-', $value));
           }
 
-          $params['f'][] = $alias . ':' . $value;
+          $params[] = $alias . ':' . $value;
         }
       }
       // When no more facet path segments have been,
@@ -73,8 +67,15 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
         break;
       }
     }
-    $this->basePath = implode('/', $args);
-    return $params;
+
+    // Mock default parameters for facetapi & related search modules.
+    if (!empty($params)) {
+      // Set search base path.
+      $_GET['q'] = implode('/', $args);
+      // Set query params.
+      $_GET['f'] = $params;
+    }
+    return $_GET;
   }
 
   /**
@@ -158,7 +159,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
     }
 
     // Construct facet path.
-    $item['#path'] = $this->constructPath($mySegments);
+    $item['#path'] = $this->constructPath($item['#path'], $mySegments);
 
     // Remove filter query params.
     $item['#query']['f'] = array();
@@ -198,10 +199,10 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
 
   /* ### Generic helpers ### */
 
-  protected function constructPath(array $segments) {
+  protected function constructPath($currentPath, array $segments) {
     // Sort to avoid multiple urls with duplicate content.
     ksort($segments);
-    $path = $this->basePath;
+    $path = $currentPath;
     foreach ($segments as $key => $segment) {
       $path .=  '/' . $segment['alias'] . '/' . $segment['value'];
     }
