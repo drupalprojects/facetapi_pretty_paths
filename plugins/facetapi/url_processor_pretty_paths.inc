@@ -54,6 +54,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
 
       // Look for matching facet.
       foreach ($facets as $facet_alias => $facet) {
+
         $pretty_paths_alias = $this->getFacetPrettyPathsAlias($facet);
 
         // Add to params if alias from url matches alias from facet settings.
@@ -65,8 +66,11 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
           if ($facet['field type'] == 'taxonomy_term') {
             $segment['value'] = array_pop(explode('-', $segment['value']));
           }
-
           $params[] = rawurlencode($facet_alias) . ':' . $segment['value'];
+
+          $segment = $this->getPathSegment($facet, $segment['value']);
+          $this->pathSegments[$segment['key']] = $segment;
+
         }
       }
       // When no more facet path segments have been,
@@ -82,7 +86,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
       // Set search base path.
       $_GET['q'] = implode('/', $args);
       // Set query params.
-      $_GET[$this->$filterKey] = $params;
+      $_GET[$this->filterKey] = $params;
     }
     return $_GET;
   }
@@ -97,120 +101,30 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
    *  Implements FacetapiUrlProcessor::getQueryString().
    */
   public function getQueryString(array $facet, array $values, $active) {
-    $this->calculatePathSegments($facet, $values, $active);
-    return $this->params;
+    $params = $this->params;
+    unset($params[$this->filterKey]);
+    return $params;
   }
 
-  /**
-   *  Calculate pathSegments and store them,
-   *  so they can be processed in postProcessFacetBuild.
-   */
-  protected function calculatePathSegments(array $facet, array $values, $active) {
+  public function getFacetPath(array $facet, array $values, $active) {
+    $segments = $this->pathSegments;
     $active_items = $this->adapter->getActiveItems($facet);
+
     foreach ($values as $value) {
+      $segment = $this->getPathSegment($facet, $value);
       if ($active && isset($active_items[$value])) {
-        // Add pretty path segment to segments array.
-        $segment = $this->getPathSegment($facet, $value);
-        $this->pathSegments = array_merge($this->pathSegments, array($segment['key'] => $segment));
+        $key = $segment['key'];
+        unset($segments[$key]);
+      }
+      elseif (!$active) {
+        $segments[$segment['key']] = $segment;
+        $field_alias = rawurlencode($facet['field alias']);
       }
     }
-  }
 
-  public function postProcess($type, array &$args) {
-    // @todo: There might be better ways to handle this, plugins?
-    switch ($type) {
-      case 'facet':
-        $this->postProcessFacetBuild($args['facet'], &$args['build']);
-        break;
-
-      case 'current_search': {
-        $this->postProcessCurrentSearchItem(&$args['variables'], $args['item']);
-        break;
-      }
-    }
-  }
-
-  protected function postProcessFacetBuild(array $facet, array &$build) {
-    foreach ($build as $value => &$item) {
-      $this->postProcessItem($facet, $item);
-    }
-  }
-
-  /**
-   * Post-processes a facet link item for pretty paths output.
-   *
-   * Rewrite its path, so it contains pretty facet paths,
-   * but remove the default 'f=' query params.
-   */
-  protected function postProcessItem(array $facet, array &$item, array &$segments = NULL) {
-    if (isset($item['#pretty_paths_processed'])) {
-      return;
-    }
-    // Get all currently active path segments so that they are
-    // combined with this facet item.
-    $segments = $segments === NULL ? $this->pathSegments : $segments;
-    $segment = $this->getPathSegment($facet, $item['#indexed_value']);
-
-    // Remove current facet from url if it is active.
-    if ($item['#active']) {
-      // Recursively process children, if available.
-      // If an active parent is de-selected, all its active children are, too.
-      if (!empty($item['#item_children'])) {
-        foreach ($item['#item_children'] as &$child) {
-          $this->postProcessItem($facet, $child, $segments);
-        }
-      }
-      unset($segments[$segment['key']]);
-      $item['#pretty_paths_processed'] = TRUE;
-    }
-
-    // Make a local copy as additional segments shouldn't be propagated to parents.
-    $mySegments = $segments;
-    // Add current facet to path if it is inactive.
-    if (!$item['#active']) {
-      $mySegments = array_merge($mySegments, array($segment['key'] => $segment));
-    }
-
-    // Construct facet path.
-    $item['#path'] = $this->constructPath($item['#path'], $mySegments);
-
-    // Remove filter query params.
-    unset($item['#query'][$this->$filterKey]);
-  }
-
-  protected function postProcessCurrentSearchItem(array &$variables, array $item) {
-    // Unset current search item.
-    $facet_name = $item['facets'][0];
-    $facet = $this->adapter->getFacet(array('name' => $facet_name));
-    $processor = $this->adapter->getProcessor($facet_name);
-    $build = $processor->getBuild();
-    $segment = $this->getPathSegment($facet->getFacet(), $item['value']);
-
-    // Construct item path.
-    $path = $this->postProcessCurrentSearchItemChild($facet->getFacet(), $build, $item);
-    $variables['path'] = $path;
-
-    // Remove filter query params.
-    unset($variables['options']['query'][$this->$filterKey]);
-  }
-
-  /**
-   * Find the item in the hierarchical $build array to process the path correctly.
-   */
-  protected function postProcessCurrentSearchItemChild(array $facet, array $build, array $item) {
-    foreach ($build as $child_value => &$child) {
-      if ($item['value'] == $child_value) {
-        $this->postProcessItem($facet, &$child);
-        return $child['#path'];
-      }
-      if (!empty($child['#item_children'])) {
-        $path = $this->postProcessCurrentSearchItemChild($facet, $child['#item_children'], $item);
-        if ($path !== NULL) {
-          return $path;
-        }
-      }
-    }
-    return NULL;
+    $base = $this->adapter->getSearchPath();
+    $path = $this->constructPath($base, $segments);
+    return $path;
   }
 
   /* ### Generic helpers ### */
@@ -220,6 +134,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
     ksort($segments);
     $path = $currentPath;
     foreach ($segments as $key => $segment) {
+      $this->encodePathSegment($segment);
       $path .=  '/' . $segment['alias'] . '/' . $segment['value'];
     }
     return $path;
@@ -236,7 +151,6 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
       'alias' => $pretty_paths_alias,
       'value' => $value,
     );
-    $this->encodePathSegment($segment);
 
     // @todo: Make this pluggable?
     // Taxonomy special case: <alias>/<term-name>-<term-id>
