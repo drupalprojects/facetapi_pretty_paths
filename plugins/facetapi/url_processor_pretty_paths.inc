@@ -82,7 +82,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
       // Set search base path.
       $_GET['q'] = implode('/', $args);
       // Set query params.
-      $_GET['f'] = $params;
+      $_GET[$this->$filterKey] = $params;
     }
     return $_GET;
   }
@@ -175,7 +175,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
     $item['#path'] = $this->constructPath($item['#path'], $mySegments);
 
     // Remove filter query params.
-    unset($item['#query']['f']);
+    unset($item['#query'][$this->$filterKey]);
   }
 
   protected function postProcessCurrentSearchItem(array &$variables, array $item) {
@@ -191,7 +191,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
     $variables['path'] = $path;
 
     // Remove filter query params.
-    unset($variables['options']['query']['f']);
+    unset($variables['options']['query'][$this->$filterKey]);
   }
 
   /**
