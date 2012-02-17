@@ -171,9 +171,10 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
     // Taxonomy special case: <alias>/<term-name>-<term-id>
     $facet = $segment['facet'];
     if ($facet['field type'] == 'taxonomy_term') {
-      $term = taxonomy_term_load($segment['value']);
-      $voc = taxonomy_vocabulary_load($term->vid);
-      $segment['value'] = $this->prettyPath($term->name) . '-' . $term->tid;
+      if ($term = taxonomy_term_load($segment['value'])) {
+        $voc = taxonomy_vocabulary_load($term->vid);
+        $segment['value'] = $this->prettyPath($term->name) . '-' . $term->tid;
+      }
     }
 
     $segment['value'] = str_replace('/', '%2F', $segment['value']);
