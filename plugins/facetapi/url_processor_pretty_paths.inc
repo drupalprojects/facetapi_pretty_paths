@@ -56,37 +56,32 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
     $facets = $this->adapter->getEnabledFacets();
 
     // Traverse all segments "<alias>/<value>" from right to left (array_pop).
-    while ($segment['value'] = array_pop($args)) {
-      $segment['alias'] = array_pop($args);
+    while ($value = array_pop($args)) {
+      $alias = array_pop($args);
       $found = FALSE;
-
-      $this->decodePathSegment($segment);
+      $alias = $this->decodePathSegmentAlias($alias);
 
       // Look for matching facet.
       foreach ($facets as $facet_alias => $facet) {
-
         $pretty_paths_alias = $this->getFacetPrettyPathsAlias($facet);
 
         // Add to params if alias from url matches alias from facet settings.
-        if ($pretty_paths_alias == $segment['alias']) {
+        if ($pretty_paths_alias == $alias) {
           $found = TRUE;
+          $value = $this->decodePathSegmentValue($value, $facet);
 
-          // @todo: Make this pluggable?
-          // Taxonomy special case: <alias>/<term-name>-<term-id>
-          if ($facet['field type'] == 'taxonomy_term') {
-            $segment['value'] = array_pop(explode('-', $segment['value']));
-          }
-          $params[] = rawurlencode($facet_alias) . ':' . $segment['value'];
+          $params[] = rawurlencode($facet_alias) . ':' . $value;
 
-          $segment = $this->getPathSegment($facet, $segment['value']);
+          // "Copy" to prevent $segment['facet'] from being overridden.
+          $my_facet = $facet;
+          $segment = $this->getPathSegment($my_facet, $value);
           $this->pathSegments[$segment['key']] = $segment;
-
         }
       }
-      // When no more facet path segments have been,
+      // When no more facet path segments have been found,
       // we assume the rest of the url as the search basePath.
       if (!$found) {
-        array_push($args, $segment['alias'], $segment['value']);
+        array_push($args, $alias, $value);
         break;
       }
     }
@@ -160,35 +155,45 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
   /**
    * Generate a path segement for a given facet + value.
    */
-  protected function getPathSegment($facet, $value) {
+  protected function getPathSegment(&$facet, $value) {
     $pretty_paths_alias = $this->getFacetPrettyPathsAlias($facet);
-
-    // Default: <alias>/<value>
-    $segment = array(
+    return array(
       'alias' => $pretty_paths_alias,
       'value' => $value,
+      'facet' => &$facet,
+      'key' => $pretty_paths_alias . "_" . $value,
     );
+  }
+
+  protected function encodePathSegment(array &$segment) {
+    // Default: <alias>/<value>
 
     // @todo: Make this pluggable?
     // Taxonomy special case: <alias>/<term-name>-<term-id>
+    $facet = $segment['facet'];
     if ($facet['field type'] == 'taxonomy_term') {
-      $term = taxonomy_term_load($value);
+      $term = taxonomy_term_load($segment['value']);
       $voc = taxonomy_vocabulary_load($term->vid);
       $segment['value'] = $this->prettyPath($term->name) . '-' . $term->tid;
     }
 
-    $segment['key'] = $pretty_paths_alias . "_" . $value;
-    return $segment;
-  }
-
-  protected function encodePathSegment(array &$segment) {
     $segment['value'] = str_replace('/', '%2F', $segment['value']);
     $segment['alias'] = rawurlencode($segment['alias']);
   }
 
-  protected function decodePathSegment(array &$segment) {
-    $segment['value'] = str_replace('%2F', '/', $segment['value']);
-    $segment['alias'] = rawurldecode($segment['alias']);
+  protected function decodePathSegmentAlias($alias) {
+    return rawurldecode($alias);
+  }
+
+  protected function decodePathSegmentValue($value, array $facet) {
+    // @todo: Make this pluggable?
+    // Taxonomy special case: <alias>/<term-name>-<term-id>
+    if ($facet['field type'] == 'taxonomy_term') {
+      $value = array_pop(explode('-', $value));
+    }
+
+    $value = str_replace('%2F', '/', $value);
+    return $value;
   }
 
   /**
@@ -216,5 +221,4 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
     return !empty($facet_settings->settings['pretty_paths_alias']) ?
       $facet_settings->settings['pretty_paths_alias'] : $facet['field alias'];
   }
-
 }
