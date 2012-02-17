@@ -119,15 +119,14 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
     $segments = $this->pathSegments;
     $active_items = $this->adapter->getActiveItems($facet);
 
+    // Adds to segments if inactive, removes if active.
     foreach ($values as $value) {
       $segment = $this->getPathSegment($facet, $value);
       if ($active && isset($active_items[$value])) {
-        $key = $segment['key'];
-        unset($segments[$key]);
+        unset($segments[$segment['key']]);
       }
       elseif (!$active) {
         $segments[$segment['key']] = $segment;
-        $field_alias = rawurlencode($facet['field alias']);
       }
     }
 
