@@ -17,18 +17,28 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
    */
   protected $pathSegments = array();
 
+  /**
+   * The adapter that uses this FacetapiUrlProcessor.
+   *
+   * @var FacetapiAdapter
+   */
   protected $adapter = array();
 
-  function __construct($adapter) {
+  /**
+   * Constructor, sets adapter.
+   *
+   * @param FacetapiAdapter $adapter
+   *   The adapter that uses this FacetapiUrlProcessor.
+   */
+  function __construct(FacetapiAdapter $adapter) {
     $this->adapter = $adapter;
   }
 
   /**
-   * Implements FacetapiUrlProcessor::fetchParams().
-   *
    * Pulls facet params from the $_GET variable.
+   *
+   * Overrides FacetapiUrlProcessorStandard::fetchParams().
    */
-
   public function fetchParams() {
     $params = array();
 
@@ -92,13 +102,9 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
   }
 
   /**
-   *  Returns the query string variables for a facet item.
+   *  Remove the filter query part from params and return it.
    *
-   *  Don't manipulate query params at all, as pretty paths are path-driven.
-   *  Instead, calculate the resulting pathSegments and store them,
-   *  so they can be processed in postProcessFacetBuild.
-   *
-   *  Implements FacetapiUrlProcessor::getQueryString().
+   *  Overrides FacetapiUrlProcessorStandard::getQueryString().
    */
   public function getQueryString(array $facet, array $values, $active) {
     $params = $this->params;
@@ -106,6 +112,14 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
     return $params;
   }
 
+  /**
+   *  Pretty paths will be generated as "search/url/segment1/segment2/".
+   *
+   *  By default, a segment will look like:
+   *    "<alias>/<value>".
+   *
+   *  Overrides FacetapiUrlProcessorStandard::getFacetPath().
+   */
   public function getFacetPath(array $facet, array $values, $active) {
     $segments = $this->pathSegments;
     $active_items = $this->adapter->getActiveItems($facet);
@@ -129,10 +143,13 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
 
   /* ### Generic helpers ### */
 
-  protected function constructPath($currentPath, array $segments) {
+  /**
+   * Construct a path from a given base path and filter segments.
+   */
+  protected function constructPath($basePath, array $segments) {
     // Sort to avoid multiple urls with duplicate content.
     ksort($segments);
-    $path = $currentPath;
+    $path = $basePath;
     foreach ($segments as $key => $segment) {
       $this->encodePathSegment($segment);
       $path .=  '/' . $segment['alias'] . '/' . $segment['value'];
