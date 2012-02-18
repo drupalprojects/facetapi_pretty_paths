@@ -42,22 +42,29 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
   public function fetchParams() {
     $params = array();
 
-    // Pretty paths are expected to be in form "search/url/segment1/segment2/".
-    // @todo: Logic to remove /search/url part from args.
-    $args = explode('/', $_GET['q']);
-
     // Skip pretty paths logic for admin pages, as
     // for pretty paths, we have to manipulate $_GET['q].
     // @todo: Fix this workaround?
-    if ($args[0] == 'admin') {
+    if (strpos($_GET['q'], 'admin/') === 0) {
       return $_GET;
     }
+
+    // Pretty paths are expected to be in form "search/url/segment1/segment2/".
+    // Remove /search/url part and prepare args for iteration.
+    $menu_item = menu_get_item();
+    $query = $_GET['q'];
+    if (strpos($query, $menu_item['path']) === 0) {
+      $query = substr($query, strlen($menu_item['path']));
+    }
+    $args = explode('/', $query);
 
     $facets = $this->adapter->getEnabledFacets();
 
     // Traverse all segments "<alias>/<value>" from right to left (array_pop).
     while ($value = array_pop($args)) {
-      $alias = array_pop($args);
+      if (!($alias = array_pop($args))) {
+        break;
+      }
       $found = FALSE;
       $alias = $this->decodePathSegmentAlias($alias);
 
@@ -89,7 +96,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
     // Mock default parameters for facetapi & related search modules.
     if (!empty($params)) {
       // Set search base path.
-      $_GET['q'] = implode('/', $args);
+      $_GET['q'] = $menu_item['path'];
       // Set query params.
       $_GET[$this->filterKey] = $params;
     }
