@@ -24,7 +24,9 @@ function facetapi_pretty_paths_facetapi_url_processors() {
  */
 function facetapi_pretty_paths_facetapi_searcher_info_alter(array &$searcher_info) {
   foreach ($searcher_info as &$info) {
-    $info['url processor'] = 'pretty_paths';
+    // Activate pretty paths optionally per searcher, as configured.
+    $id = 'facetapi_pretty_paths_searcher_' . $info['name'];
+    $info['url processor'] = variable_get($id) ? 'pretty_paths' : 'standard';
   }
 }
 
@@ -36,7 +38,6 @@ function facetapi_pretty_paths_form_facetapi_facet_display_form_alter(&$form, &$
   $adapter = $form['#facetapi']['adapter'];
   $processor = new FacetapiUrlProcessorPrettyPaths($adapter);
   $pretty_paths_alias = $processor->getFacetPrettyPathsAlias($form['#facetapi']['facet']);
-
 
   // Add pretty paths alias option to global facet settings.
   $form['global']['pretty_paths_alias'] = array(
@@ -50,4 +51,43 @@ function facetapi_pretty_paths_form_facetapi_facet_display_form_alter(&$form, &$
       t('For taxonomy terms it outputs the id as well: "@taxonomy_segment".',
         array('@taxonomy_segment' => '<alias>/<term-name>-<term-id>')),
   );
+}
+
+/**
+ * Implements hook_menu().
+ */
+function facetapi_pretty_paths_menu() {
+  $items = array();
+  $items['admin/config/search/facetapi_pretty_paths'] = array(
+    'title' => t('FacetAPI Pretty Paths'),
+    'description' => t('Configure pretty paths settings'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('facetapi_pretty_paths_admin'),
+    'access arguments' => array('access administration pages'),
+    'type' => MENU_NORMAL_ITEM,
+   );
+  return $items;
+}
+
+/**
+ * Implements hook_admin().
+ */
+function facetapi_pretty_paths_admin() {
+  $form = array();
+  // Allow to enable / disable pretty paths per searcher.
+  $searcher_info = facetapi_get_searcher_info();
+  $form['searcher'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Enable pretty paths per searcher'),
+  );
+  foreach ($searcher_info as &$info) {
+    $id = 'facetapi_pretty_paths_searcher_' . $info['name'];
+    $form['searcher'][$id] = array(
+      '#type' => 'checkbox',
+      '#title' => $info['name'],
+      '#default_value' => variable_get($id, $info['url processor'] == 'pretty_paths'), // ''standard'
+      '#description' => t("Use pretty paths for the @searcher_label", array("@searcher_label" => $info['label'])),
+    );
+  }
+  return system_settings_form($form);
 }
