@@ -147,7 +147,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
   /**
    * Construct a path from a given base path and filter segments.
    */
-  protected function constructPath($basePath, array $segments) {
+  public function constructPath($basePath, array $segments) {
     // Sort to avoid multiple urls with duplicate content.
     ksort($segments);
     $path = $basePath;
