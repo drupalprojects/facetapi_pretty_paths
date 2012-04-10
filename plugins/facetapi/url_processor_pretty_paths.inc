@@ -228,4 +228,69 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
     return !empty($facet_settings->settings['pretty_paths_alias']) ?
       $facet_settings->settings['pretty_paths_alias'] : $facet['field alias'];
   }
+
+  /**
+   * Implements FacetapiUrlProcessorPrettyPaths::setBreadcrumb().
+   */
+  public function setBreadcrumb() {
+    $breadcrumb = drupal_get_breadcrumb();
+
+    // $facets to use later to get the segment
+    $facets = $this->adapter->getEnabledFacets();
+
+    // Gets search keys and active items form the adapter.
+    $keys = $this->adapter->getSearchKeys();
+    $active_items = $this->adapter->getAllActiveItems();
+
+    $item = menu_get_item();
+    $last_load_func = is_array($item['load_functions']) ? end($item['load_functions']) : NULL;
+    if (!empty($item['title']) && ((!$keys && $active_items) || ($keys && $last_load_func != 'menu_tail_load'))) {
+      $last = end($breadcrumb);
+      $this_page = l($item['title'], $item['href'], $item['localized_options']);
+      if ($last != $this_page) {
+        $breadcrumb[] = $this_page;
+      }
+    }
+
+    // Initializes base breadcrumb query.
+    $query = $this->params;
+    unset($query[$this->filterKey]);
+
+    // Adds the current search to the query.
+    if ($keys) {
+      // The last item should be text, not a link.
+      $breadcrumb[] = $active_items ? l($keys, current_path(), array('query' => $query)) : check_plain($keys);
+    }
+
+    // Use this to track the active facet trail.
+    $segments = array();
+
+    // Reverse the active facets so that the breadcrumbs come out in the
+    // correct order.
+    $active_items = array_reverse($active_items);
+
+    // Keep track of what the last item is.
+    $last = end($active_items);
+
+    foreach ($active_items as $item) {
+      // Add this breadcrumb segment to the complete segments list.
+      $segments[] = $this->getPathSegment($facets[$item['field alias']], $item['value']);
+
+      // Replaces with the mapped value.
+      $value = $this->adapter->getMappedValue($item['facets'][0], $item['value']);
+
+      // The last item should be text, not a link.
+      if ($last == $item) {
+        $breadcrumb[] = !empty($value['#html']) ? $value['#markup'] : check_plain($value['#markup']);
+      }
+      else {
+        $base = $this->adapter->getSearchPath();
+        $path = $this->constructPath($base, $segments);
+        $breadcrumb[] = l($value['#markup'], $path, array('html' => !empty($value['#html'])));
+      }
+    }
+
+    // Sets the breadcrumb trail with h keys and filters.
+    drupal_set_breadcrumb($breadcrumb);
+  }
 }
