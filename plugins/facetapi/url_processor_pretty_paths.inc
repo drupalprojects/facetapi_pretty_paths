@@ -52,7 +52,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
     // Pretty paths are expected to be in form "search/url/segment1/segment2/".
     // Remove /search/url part and prepare args for iteration.
     $menu_item = menu_get_item();
-    $query = $_GET['q'];
+    $query = drupal_encode_path($_GET['q']);
     if (strpos($query, $menu_item['path']) === 0) {
       $query = substr($query, strlen($menu_item['path']));
     }
