@@ -31,9 +31,14 @@ function facetapi_pretty_paths_facetapi_searcher_info_alter(array &$searcher_inf
 }
 
 /**
+ * Add pretty path settings to facet configuration.
+ *
  * Implements hook_form_BASE_FORM_ID_alter().
  */
 function facetapi_pretty_paths_form_facetapi_facet_display_form_alter(&$form, &$form_state, $form_id) {
+  if (!user_access('administer facetapi pretty paths')) {
+    return;
+  }
   // Get global facet settings.
   $adapter = $form['#facetapi']['adapter'];
   $processor = new FacetapiUrlProcessorPrettyPaths($adapter);
@@ -62,7 +67,7 @@ function facetapi_pretty_paths_menu() {
     'title' => t('FacetAPI Pretty Paths'),
     'description' => t('Configure pretty paths settings'),
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('facetapi_pretty_paths_admin'),
+    'page arguments' => array('facetapi_pretty_paths_admin_form'),
     'access arguments' => array('administer facetapi pretty paths'),
     'type' => MENU_NORMAL_ITEM,
    );
@@ -81,9 +86,9 @@ function facetapi_pretty_paths_permission() {
 }
 
 /**
- * Implements hook_admin().
+ * Administration form.
  */
-function facetapi_pretty_paths_admin() {
+function facetapi_pretty_paths_admin_form() {
   $form = array();
   // Allow to enable / disable pretty paths per searcher.
   $searcher_info = facetapi_get_searcher_info();
