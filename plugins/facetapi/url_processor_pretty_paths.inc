@@ -189,7 +189,10 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
   }
 
   protected function decodePathSegmentAlias($alias) {
-    return rawurldecode($alias);
+    // We need to decode path aliases twice.
+    $alias = rawurldecode($alias);
+    $alias = rawurldecode($alias);
+    return $alias;
   }
 
   protected function decodePathSegmentValue($value, array $facet) {
