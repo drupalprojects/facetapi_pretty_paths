@@ -63,10 +63,21 @@ function facetapi_pretty_paths_menu() {
     'description' => t('Configure pretty paths settings'),
     'page callback' => 'drupal_get_form',
     'page arguments' => array('facetapi_pretty_paths_admin'),
-    'access arguments' => array('access administration pages'),
+    'access arguments' => array('administer facetapi pretty paths'),
     'type' => MENU_NORMAL_ITEM,
    );
   return $items;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function facetapi_pretty_paths_permission() {
+  return array(
+    'administer facetapi pretty paths' => array(
+      'title' => t('Administer Facet API Pretty Paths'),
+    ),
+  );
 }
 
 /**
