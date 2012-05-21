@@ -202,7 +202,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
       $value = array_pop(explode('-', $value));
     }
 
-    $value = str_replace('%2F', '/', $value);
+    $value = str_replace('%2F', '/', rawurldecode($value));
     return $value;
   }
 
