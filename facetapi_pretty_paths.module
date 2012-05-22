@@ -20,13 +20,14 @@ function facetapi_pretty_paths_facetapi_url_processors() {
  * @param array &$searcher_info
  *   The return values of hook_facetapi_searcher_info() implementations.
  *
- * @see hook_facetapi_searcher_info()
+ * Implements hook_facetapi_searcher_info().
  */
 function facetapi_pretty_paths_facetapi_searcher_info_alter(array &$searcher_info) {
   foreach ($searcher_info as &$info) {
     // Activate pretty paths optionally per searcher, as configured.
     $id = 'facetapi_pretty_paths_searcher_' . $info['name'];
     $info['url processor'] = variable_get($id) ? 'pretty_paths' : 'standard';
+    $info['facetapi pretty paths coder'] = 'default';
   }
 }
 
@@ -107,3 +108,66 @@ function facetapi_pretty_paths_admin_form() {
   }
   return system_settings_form($form);
 }
+
+/**
+ * Implements hook_ctools_plugin_type().
+ */
+function facetapi_pretty_paths_ctools_plugin_type() {
+  $plugins['coders'] = array(
+    'use hooks' => TRUE,
+  );
+  return $plugins;
+}
+
+/**
+ * Implements hook_facetapi_pretty_paths_coders().
+ */
+function facetapi_pretty_paths_facetapi_pretty_paths_coders() {
+  $coders = array(
+    'default' => array(
+      'handler' => array(
+        'label' => t('Default pretty paths coder'),
+        'class' => 'FacetApiPrettyPathsCoderDefault',
+      ),
+    ),
+    'taxonomy' => array(
+      'handler' => array(
+        'label' => t('Taxonomy specific pretty paths coder'),
+        'class' => 'FacetApiPrettyPathsCoderTaxonomy',
+      ),
+    ),
+  );
+  // Allow other modules to alter the coder definitions.
+  drupal_alter('facetapi_pretty_paths_facetapi_pretty_paths_coders', $coders);
+  return $coders;
+}
+
+/**
+ * Implements hook_facetapi_facet_info().
+ */
+function facetapi_pretty_paths_facetapi_facet_info_alter(array &$facet_info, array $searcher_info) {
+  foreach ($facet_info as &$facet) {
+    if ($facet['field type'] == 'taxonomy_term') {
+      $facet['facetapi pretty paths coder'] = 'taxonomy';
+    }
+  }
+}
+
+/**
+ * Helper function for calling coder callbacks.
+ */
+function facetapi_pretty_paths_coder_callback($callback, $args) {
+  $id = 'default';
+  if (isset($args['facet']) && isset($args['facet']['facetapi pretty paths coder'])) {
+    $id = $args['facet']['facetapi pretty paths coder'];
+  }
+
+  if ($class = ctools_plugin_load_class('facetapi_pretty_paths', 'coders', $id, 'handler')) {
+    $args = func_get_args();
+    // Remove $callback from the arguments.
+    unset($args[0]);
+    $instance = new $class();
+    return call_user_func_array(array($instance, $callback), $args);
+  }
+}
+

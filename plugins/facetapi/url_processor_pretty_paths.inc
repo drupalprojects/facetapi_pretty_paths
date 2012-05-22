@@ -152,7 +152,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
     ksort($segments);
     $path = $basePath;
     foreach ($segments as $key => $segment) {
-      $this->encodePathSegment($segment);
+      $this->encodePathSegment(&$segment, $segment['facet']);
       $path .=  '/' . $segment['alias'] . '/' . $segment['value'];
     }
     return $path;
@@ -171,52 +171,30 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
     );
   }
 
-  protected function encodePathSegment(array &$segment) {
-    // Default: <alias>/<value>
-
-    // @todo: Make this pluggable?
-    // Taxonomy special case: <alias>/<term-name>-<term-id>
-    $facet = $segment['facet'];
-    if ($facet['field type'] == 'taxonomy_term') {
-      if ($term = taxonomy_term_load($segment['value'])) {
-        $voc = taxonomy_vocabulary_load($term->vid);
-        $segment['value'] = $this->prettyPath($term->name) . '-' . $term->tid;
-      }
-    }
-
-    $segment['value'] = str_replace('/', '%2F', $segment['value']);
-    $segment['alias'] = rawurlencode($segment['alias']);
+  protected function encodePathSegment(array &$segment, array $facet) {
+    facetapi_pretty_paths_coder_callback('encodePathSegment',
+      array(
+        'segment' => &$segment,
+        'facet' => $facet
+      )
+    );
   }
 
   protected function decodePathSegmentAlias($alias) {
-    // We need to decode path aliases twice.
-    $alias = rawurldecode($alias);
-    $alias = rawurldecode($alias);
-    return $alias;
+    return facetapi_pretty_paths_coder_callback('decodePathSegmentAlias',
+      array(
+        'alias' => $alias
+      )
+    );
   }
 
   protected function decodePathSegmentValue($value, array $facet) {
-    // @todo: Make this pluggable?
-    // Taxonomy special case: <alias>/<term-name>-<term-id>
-    if ($facet['field type'] == 'taxonomy_term') {
-      $value = array_pop(explode('-', $value));
-    }
-
-    $value = str_replace('%2F', '/', rawurldecode($value));
-    return $value;
-  }
-
-  /**
-   * Convert a given text to a pretty path using pathauto, if available.
-   */
-  protected function prettyPath($text) {
-    // @todo: Make this pluggable?
-    if (module_exists('pathauto')) {
-      // Needed, as of http://drupal.org/node/907578#comment-5564008
-      require_once drupal_get_path('module', 'pathauto') . '/pathauto.inc';
-      return pathauto_cleanstring($text);
-    }
-    return $text;
+    return facetapi_pretty_paths_coder_callback('decodePathSegmentValue',
+      array(
+        'facet' => $facet,
+        'value' => $value
+      )
+    );
   }
 
   /**
