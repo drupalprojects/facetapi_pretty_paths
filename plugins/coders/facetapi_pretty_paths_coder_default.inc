@@ -10,12 +10,26 @@
  */
 class FacetApiPrettyPathsCoderDefault {
 
+  /**
+   * Encode a path segment in order to output it as part of a pretty path.
+   *
+   * @param array $args An associative array containing:
+   * - segment: The path segment to encode.
+   * - facet: The facet that triggered the segment.
+   */
   public function encodePathSegment(array $args) {
     // Default: <alias>/<value>
     $args['segment']['value'] = str_replace('/', '%2F', $args['segment']['value']);
     $args['segment']['alias'] = rawurlencode($args['segment']['alias']);
   }
 
+  /**
+   * Decode the alias part of a path segment in order
+   * to interpret it from a given pretty path.
+   *
+   * @param array $args An associative array containing:
+   * - alias: The alias to decode.
+   */
   public function decodePathSegmentAlias(array $args) {
     $alias = $args['alias'];
     // We need to decode path aliases twice.
@@ -24,6 +38,14 @@ class FacetApiPrettyPathsCoderDefault {
     return $alias;
   }
 
+  /**
+   * Decode the value part of a path segment in order
+   * to interpret it from a given pretty path.
+   *
+   * @param array $args An associative array containing:
+   * - segment: The path segment to decode.
+   * - facet: The facet that is related to the path segment.
+   */
   public function decodePathSegmentValue(array $args) {
     $value = $args['value'];
     $value = str_replace('%2F', '/', rawurldecode($value));
@@ -42,5 +64,4 @@ class FacetApiPrettyPathsCoderDefault {
     }
     return $text;
   }
-
 }
