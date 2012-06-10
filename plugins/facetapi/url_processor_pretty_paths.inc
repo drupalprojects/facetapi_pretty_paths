@@ -152,7 +152,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
     ksort($segments);
     $path = $basePath;
     foreach ($segments as $key => $segment) {
-      $this->encodePathSegment(&$segment, $segment['facet']);
+      $this->encodePathSegment($segment, $segment['facet']);
       $path .=  '/' . $segment['alias'] . '/' . $segment['value'];
     }
     return $path;
