@@ -28,7 +28,8 @@ class FacetApiPrettyPathsCoderTaxonomy extends FacetApiPrettyPathsCoderDefault {
    * @see FacetApiPrettyPathsCoderDefault::decodePathSegmentValue()
    */
   public function decodePathSegmentValue(array $args) {
-    $args['value'] = array_pop(explode('-', $args['value']));
+    $exploded = explode('-', $args['value']);
+    $args['value'] = array_pop($exploded);
     return parent::decodePathSegmentValue($args);
   }
 }
