@@ -72,7 +72,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
           $found = TRUE;
           $value = $this->decodePathSegmentValue($value, $facet);
 
-          $params[] = rawurlencode($facet_alias) . ':' . $value;
+          $params[] = rawurlencode($facet['field']) . ':' . $value;
 
           // "Copy" to prevent $segment['facet'] from being overridden.
           $my_facet = $facet;
@@ -250,7 +250,8 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
 
     foreach ($active_items as $item) {
       // Add this breadcrumb segment to the complete segments list.
-      $segments[] = $this->getPathSegment($facets[$item['field alias']], $item['value']);
+      // Do not use aliases, use the real facet
+      $segments[] = $this->getPathSegment($facets[$item['facets'][0]], $item['value']);
 
       // Replaces with the mapped value.
       $value = $this->adapter->getMappedValue($item['facets'][0], $item['value']);
