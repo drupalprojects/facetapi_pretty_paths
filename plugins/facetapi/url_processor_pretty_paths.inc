@@ -56,7 +56,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
     $facets = $this->adapter->getEnabledFacets();
 
     // Traverse all segments "<alias>/<value>" from right to left (array_pop).
-    while ($value = array_pop($args)) {
+    while (($value = array_pop($args)) !== NULL) {
       if (!($alias = array_pop($args))) {
         break;
       }
