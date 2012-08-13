@@ -20,6 +20,7 @@ class FacetApiPrettyPathsCoderDefault {
   public function encodePathSegment(array $args) {
     // Default: <alias>/<value>
     $args['segment']['value'] = str_replace('/', '%2F', $args['segment']['value']);
+    $args['segment']['value'] = str_replace('.', '%47', $args['segment']['value']);
     $args['segment']['alias'] = rawurlencode($args['segment']['alias']);
   }
 
@@ -49,6 +50,7 @@ class FacetApiPrettyPathsCoderDefault {
   public function decodePathSegmentValue(array $args) {
     $value = $args['value'];
     $value = str_replace('%2F', '/', rawurldecode($value));
+    $value = str_replace('%47', '.', rawurldecode($value));
     return $value;
   }
 
