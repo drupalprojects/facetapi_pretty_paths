@@ -88,14 +88,17 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
       }
     }
 
+    // Since we traversed all segments from right to left we need to reverse
+    // them here. Reason is because the order matters for some facets.
+    $this->pathSegments = array_reverse($this->pathSegments);
+    $params = array_reverse($params);
+
     // Mock default parameters for facetapi & related search modules.
     if (!empty($params)) {
       // Set search base path.
       $_GET['q'] = $item['href'];
       // Set query params.
-      // Since we traversed all segments from right to left we need to reverse
-      // $params here. Reason is because the order matters for some facets.
-      $_GET[$this->filterKey] = array_reverse($params);
+      $_GET[$this->filterKey] = $params;
     }
     return $_GET;
   }
