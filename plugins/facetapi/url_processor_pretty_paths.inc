@@ -93,7 +93,9 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
       // Set search base path.
       $_GET['q'] = $item['href'];
       // Set query params.
-      $_GET[$this->filterKey] = $params;
+      // Since we traversed all segments from right to left we need to reverse
+      // $params here. Reason is because the order matters for some facets.
+      $_GET[$this->filterKey] = array_reverse($params);
     }
     return $_GET;
   }
@@ -240,10 +242,6 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
 
     // Use this to track the active facet trail.
     $segments = array();
-
-    // Reverse the active facets so that the breadcrumbs come out in the
-    // correct order.
-    $active_items = array_reverse($active_items);
 
     // Keep track of what the last item is.
     $last = end($active_items);
