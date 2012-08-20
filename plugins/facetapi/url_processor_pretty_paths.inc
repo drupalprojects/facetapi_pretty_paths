@@ -156,7 +156,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
   }
 
   /**
-   * Generate a path segement for a given facet + value.
+   * Generate a path segment for a given facet + value.
    */
   protected function getPathSegment(&$facet, $value) {
     $pretty_paths_alias = $this->getFacetPrettyPathsAlias($facet);
