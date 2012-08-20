@@ -25,6 +25,11 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
   protected $adapter = array();
 
   /**
+   * Options that apply for this FacetapiUrlProcessor.
+   */
+  protected $options = array();
+
+  /**
    * Constructor, sets adapter.
    *
    * @param FacetapiAdapter $adapter
@@ -32,6 +37,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
    */
   function __construct(FacetapiAdapter $adapter) {
     $this->adapter = $adapter;
+    $this->options = variable_get('facetapi_pretty_paths_searcher_' . $this->adapter->getSearcher() . '_options');
   }
 
   /**
@@ -148,8 +154,10 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
    * Construct a path from a given base path and filter segments.
    */
   public function constructPath($basePath, array $segments) {
-    // Sort to avoid multiple urls with duplicate content.
-    ksort($segments);
+    if (!empty($this->options['sort_path_segments'])) {
+      // Sort to avoid multiple urls with duplicate content.
+      ksort($segments);
+    }
     $path = $basePath;
     foreach ($segments as $key => $segment) {
       $this->encodePathSegment($segment, $segment['facet']);
