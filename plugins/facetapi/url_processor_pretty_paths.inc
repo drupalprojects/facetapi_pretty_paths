@@ -11,6 +11,13 @@
 class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
 
   /**
+   * An array of filter params.
+   *
+   * @var array.
+   */
+  protected $filterParams = array();
+
+  /**
    * An array of pretty path segments.
    *
    * @var array.
@@ -53,7 +60,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
   public function fetchParams() {
     $this->fullPath = $_GET['q'];
 
-    $params = array();
+    $this->filterParams = array();
 
     // Skip pretty paths logic for admin pages, as
     // for pretty paths, we have to manipulate $_GET['q].
@@ -85,7 +92,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
           $found = TRUE;
           $value = $this->decodePathSegmentValue($value, $facet);
 
-          $params[] = rawurlencode($facet['field']) . ':' . $value;
+          $this->filterParams[] = rawurlencode($facet['field']) . ':' . $value;
 
           // "Copy" to prevent $segment['facet'] from being overridden.
           $my_facet = $facet;
@@ -104,14 +111,14 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
     // Since we traversed all segments from right to left we need to reverse
     // them here. Reason is because the order matters for some facets.
     $this->pathSegments = array_reverse($this->pathSegments);
-    $params = array_reverse($params);
+    $this->filterParams = array_reverse($this->filterParams);
 
     // Mock default parameters for facetapi & related search modules.
-    if (!empty($params)) {
+    if (!empty($this->filterParams)) {
       // Set search base path.
       $_GET['q'] = $item['href'];
       // Set query params.
-      $_GET[$this->filterKey] = $params;
+      $_GET[$this->filterKey] = $this->filterParams;
     }
     return $_GET;
   }
