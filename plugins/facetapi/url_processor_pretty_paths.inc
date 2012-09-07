@@ -30,6 +30,11 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
   protected $options = array();
 
   /**
+   * The full path string, as we override $_GET['q].
+   */
+  protected $fullPath = NULL;
+
+  /**
    * Constructor, sets adapter.
    *
    * @param FacetapiAdapter $adapter
@@ -46,6 +51,8 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
    * Overrides FacetapiUrlProcessorStandard::fetchParams().
    */
   public function fetchParams() {
+    $this->fullPath = $_GET['q'];
+
     $params = array();
 
     // Skip pretty paths logic for admin pages, as
@@ -279,4 +286,9 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
     // Sets the breadcrumb trail with h keys and filters.
     drupal_set_breadcrumb($breadcrumb);
   }
+
+  public function getFullPath() {
+    return $this->fullPath;
+  }
+
 }
