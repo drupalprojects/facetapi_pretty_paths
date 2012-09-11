@@ -113,14 +113,10 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
     $this->pathSegments = array_reverse($this->pathSegments);
     $this->filterParams = array_reverse($this->filterParams);
 
-    // Mock default parameters for facetapi & related search modules.
-    if (!empty($this->filterParams)) {
-      // Set search base path.
-      $_GET['q'] = $item['href'];
-      // Set query params.
-      $_GET[$this->filterKey] = $this->filterParams;
-    }
-    return $_GET;
+    // Return params as expected.
+    $params = $_GET;
+    $params[$this->filterKey] = $this->filterParams;
+    return $params;
   }
 
   /**
