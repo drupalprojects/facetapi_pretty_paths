@@ -258,7 +258,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
     // Adds the current search to the query.
     if ($keys) {
       // The last item should be text, not a link.
-      $breadcrumb[] = $active_items ? l($keys, current_path(), array('query' => $query)) : check_plain($keys);
+      $breadcrumb[] = $active_items ? l($keys, $item['href'], array('query' => $query)) : check_plain($keys);
     }
 
     // Use this to track the active facet trail.
