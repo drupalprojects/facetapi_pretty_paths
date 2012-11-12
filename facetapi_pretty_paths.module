@@ -94,8 +94,7 @@ function facetapi_pretty_paths_permission() {
 /**
  * Administration form.
  */
-function facetapi_pretty_paths_admin_form() {
-  $form = array();
+function facetapi_pretty_paths_admin_form($form, &$form_state) {
   // Allow to enable / disable pretty paths per searcher.
   $searcher_info = facetapi_get_searcher_info();
   $form['searcher'] = array(
@@ -103,7 +102,7 @@ function facetapi_pretty_paths_admin_form() {
     '#title' => t('Enable pretty paths per searcher'),
     '#type' => 'fieldset',
   );
-  foreach ($searcher_info as &$info) {
+  foreach (facetapi_get_searcher_info() as $info) {
     $id = 'facetapi_pretty_paths_searcher_' . $info['name'];
     // Add a checkbox to enable pretty paths per searcher.
     $form['searcher'][$id] = array(
