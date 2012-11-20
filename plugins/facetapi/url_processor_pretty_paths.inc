@@ -153,22 +153,25 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
       }
     }
 
-    $base = $this->adapter->getSearchPath();
-    $path = $this->constructPath($base, $segments);
+    $path = $this->constructPath($segments);
     return $path;
   }
 
   /* ### Generic helpers ### */
 
   /**
-   * Construct a path from a given base path and filter segments.
+   * Construct a path from for a given array of filter segments.
+   *
+   * @param array $segments
+   * @return string
    */
-  public function constructPath($basePath, array $segments) {
+  public function constructPath(array $segments) {
     if (!empty($this->options['sort_path_segments'])) {
       // Sort to avoid multiple urls with duplicate content.
       ksort($segments);
     }
-    $path = $basePath;
+    $path = $this->adapter->getSearchPath();
+    // Add all path segments.
     foreach ($segments as $key => $segment) {
       $this->encodePathSegment($segment, $segment['facet']);
       $path .=  '/' . $segment['alias'] . '/' . $segment['value'];
@@ -281,7 +284,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
       }
       else {
         $base = $this->adapter->getSearchPath();
-        $path = $this->constructPath($base, $segments);
+        $path = $this->constructPath($segments);
         $breadcrumb[] = l($value['#markup'], $path, array('html' => !empty($value['#html'])));
       }
     }
