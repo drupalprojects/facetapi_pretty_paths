@@ -107,7 +107,7 @@ function facetapi_pretty_paths_admin_form($form, &$form_state) {
     // Add a checkbox to enable pretty paths per searcher.
     $form['searcher'][$id] = array(
       '#type' => 'checkbox',
-      '#title' => $info['name'],
+      '#title' => t('@searcher', array('@searcher' => $info['name'])),
       '#default_value' => variable_get($id, $info['url processor'] == 'pretty_paths'),
       '#description' => t("Use pretty paths for the @searcher_label", array("@searcher_label" => $info['label'])),
     );
@@ -115,7 +115,7 @@ function facetapi_pretty_paths_admin_form($form, &$form_state) {
     $options = variable_get($id . '_options');
     $form['searcher'][$id . '_options'] = array(
       '#type' => 'fieldset',
-      '#title' => 'Options for ' . $info['name'],
+      '#title' => t('Options for @searcher', array('@searcher' => $info['name'])),
       '#tree' => TRUE,
       '#states' => array(
         'visible' => array(
@@ -125,7 +125,7 @@ function facetapi_pretty_paths_admin_form($form, &$form_state) {
     );
     $form['searcher'][$id . '_options']['sort_path_segments'] = array(
       '#type' => 'checkbox',
-      '#title' => 'Make paths unique by sorting them.',
+      '#title' => t('Make paths unique by sorting them.'),
       '#default_value' => isset($options['sort_path_segments']) ? $options['sort_path_segments'] : FALSE,
       '#description' => t("Sorted paths lead to unique, canonical urls. Keep in mind that this will replace the order in which user clicked the facets."),
     );
