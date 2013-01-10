@@ -8,3 +8,4 @@ package = Search Toolkit
 files[] = plugins/facetapi/url_processor_pretty_paths.inc
 files[] = plugins/coders/facetapi_pretty_paths_coder_default.inc
 files[] = plugins/coders/facetapi_pretty_paths_coder_taxonomy.inc
+files[] = plugins/coders/facetapi_pretty_paths_coder_taxonomy_pathauto.inc

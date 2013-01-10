@@ -48,7 +48,8 @@ function facetapi_pretty_paths_form_facetapi_facet_display_form_alter(&$form, &$
   // Get global facet settings.
   $adapter = $form['#facetapi']['adapter'];
   $processor = new FacetapiUrlProcessorPrettyPaths($adapter);
-  $pretty_paths_alias = $processor->getFacetPrettyPathsAlias($form['#facetapi']['facet']);
+  $facet = $form['#facetapi']['facet'];
+  $pretty_paths_alias = $processor->getFacetPrettyPathsAlias($facet);
 
   // Add pretty paths alias option to global facet settings.
   $form['global']['pretty_paths_alias'] = array(
@@ -62,6 +63,78 @@ function facetapi_pretty_paths_form_facetapi_facet_display_form_alter(&$form, &$
       t('For taxonomy terms it outputs the id as well: "@taxonomy_segment".',
         array('@taxonomy_segment' => '<alias>/<term-name>-<term-id>')),
   );
+
+  // Taxonomy Pathauto Coder settings.
+
+  // 1. Check if pathauto is enabled.
+  // 2. Check for Apache Solr taxonomy term fields.
+  // 3. Check for Search API taxonomy term fields.
+  if (module_exists('pathauto') &&
+      ((!empty($facet['map options']['module_name']) && $facet['map options']['module_name'] == 'Taxonomy') ||
+      (!empty($facet['field type']) && $facet['field type'] == 'taxonomy_term'))) {
+
+    $facet_settings = $adapter->getFacetSettingsGlobal($facet);
+    $form['global']['pretty_paths_taxonomy_pathauto'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Reuse term aliases'),
+      '#default_value' => !empty($facet_settings->settings['pretty_paths_taxonomy_pathauto']) ? TRUE : FALSE,
+      '#description' => t('If set, the term alias from the pathauto settings will be reused, which avoids term ids in the facet aliases. This setting only works if the default taxonomy path pattern \'[term:vocabulary]/[term:name]\' is used.'),
+    );
+    $options = array();
+    foreach (taxonomy_get_vocabularies() as $voc) {
+      $options[$voc->machine_name] = $voc->name;
+    }
+    $vocabulary = facetapi_pretty_paths_taxonomy_facet_get_vocabulary($facet);
+    $default_voc_name = $vocabulary ? $vocabulary->machine_name : array();
+    $form['global']['pretty_paths_taxonomy_pathauto_vocabulary'] = array(
+      '#type' => 'select',
+      '#title' => t('Vocabulary for pathauto'),
+      '#options' => $options,
+      '#default_value' => !empty($facet_settings->settings['pretty_paths_taxonomy_pathauto_vocabulary']) ? $facet_settings->settings['pretty_paths_taxonomy_pathauto_vocabulary'] : $default_voc_name,
+      '#description' => t('Select the appropriate vocabulary for this facet. In case the facet values come from a taxonomy field, the appropriate vocabulary is calculated.'),
+      '#disabled' => !empty($default_voc_name),
+      '#states' => array(
+        'visible' => array(
+          ':input[name="global[pretty_paths_taxonomy_pathauto]"]' => array('checked' => TRUE),
+        ),
+      ),
+    );
+  }
+  $form['#submit'][] = 'facetapi_pretty_paths_facetapi_facet_display_form_submit';
+}
+
+/**
+ * Additional form submission handler for 'facetapi_facet_display_form'.
+ */
+function facetapi_pretty_paths_facetapi_facet_display_form_submit($form, &$form_state) {
+  // Clear the facet api cache as the settings for the pretty paths might have
+  // changed.
+  cache_clear_all('facetapi:facet_info:', 'cache', TRUE);
+}
+
+/**
+ * Helper function that returns the vocabulary for a taxonomy facet.
+ */
+function facetapi_pretty_paths_taxonomy_facet_get_vocabulary($facet_info) {
+  if (isset($facet_info['field'])) {
+    $facet_field_name = $facet_info['field'];
+    // The Search API chains properties with ':'. The last taxonomy field in
+    // this chain is the key for the vocabulary.
+    // The Apache Solr module only contains Field API names. In this case
+    // the explode function returns the whole string in the first array
+    // value.
+    $exploded = explode(':', $facet_field_name);
+    foreach (array_reverse($exploded) as $property_name) {
+      $field_info = field_info_field($property_name);
+      if ($field_info && isset($field_info['settings']['allowed_values'][0]['vocabulary'])) {
+        $voc = taxonomy_vocabulary_machine_name_load($field_info['settings']['allowed_values'][0]['vocabulary']);
+        if ($voc) {
+          return $voc;
+        }
+      }
+    }
+  }
+  return FALSE;
 }
 
 /**
@@ -160,6 +233,12 @@ function facetapi_pretty_paths_facetapi_pretty_paths_coders() {
         'class' => 'FacetApiPrettyPathsCoderTaxonomy',
       ),
     ),
+    'taxonomy_pathauto' => array(
+      'handler' => array(
+        'label' => t('Taxonomy specific pathauto coder'),
+        'class' => 'FacetApiPrettyPathsCoderTaxonomyPathauto',
+      ),
+    ),
   );
   // Allow other modules to alter the coder definitions.
   drupal_alter('facetapi_pretty_paths_facetapi_pretty_paths_coders', $coders);
@@ -167,21 +246,32 @@ function facetapi_pretty_paths_facetapi_pretty_paths_coders() {
 }
 
 /**
- * Implements hook_facetapi_facet_info().
+ * Implements hook_facetapi_facet_info_alter().
  */
 function facetapi_pretty_paths_facetapi_facet_info_alter(array &$facet_info, array $searcher_info) {
+  // Loading the adapter within hook_facetapi_facet_info_alter() is evil as it
+  // already builds the facet settings and statically caches them, without
+  // including our alterations. Thus we have to clear the static cache of
+  // facetapi_get_enabled_facets() at the end.
+  $adapter = facetapi_adapter_load($searcher_info['name']);
+
   foreach ($facet_info as &$facet) {
+    $taxonomy_coder = 'taxonomy';
+    $facet_settings = $adapter->getFacetSettingsGlobal($facet);
+    if (module_exists('pathauto') && !empty($facet_settings->settings['pretty_paths_taxonomy_pathauto'])) {
+      $taxonomy_coder = 'taxonomy_pathauto';
+    }
     // Check for Apache Solr Taxonomy Term fields.
-    if(!empty($facet_info['map options']['module_name']) && $facet_info['map options']['module_name'] == 'Taxonomy') {
-       $facet['facetapi pretty paths coder'] = 'taxonomy';
-      continue;
+    if (!empty($facet_info['map options']['module_name']) && $facet_info['map options']['module_name'] == 'Taxonomy') {
+      $facet['facetapi pretty paths coder'] = $taxonomy_coder;
     }
     // Check for Search API Taxonomy Term fields.
-    if (!empty($facet['field type']) && $facet['field type'] == 'taxonomy_term') {
-      $facet['facetapi pretty paths coder'] = 'taxonomy';
-      continue;
+    else if (!empty($facet['field type']) && $facet['field type'] == 'taxonomy_term') {
+      $facet['facetapi pretty paths coder'] = $taxonomy_coder;
     }
   }
+
+  drupal_static_reset('facetapi_get_enabled_facets');
 }
 
 /**

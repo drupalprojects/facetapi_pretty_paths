@@ -196,7 +196,8 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
     facetapi_pretty_paths_coder_callback('encodePathSegment',
       array(
         'segment' => &$segment,
-        'facet' => $facet
+        'facet' => $facet,
+        'adapter' => $this->adapter,
       )
     );
   }
@@ -213,7 +214,8 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
     return facetapi_pretty_paths_coder_callback('decodePathSegmentValue',
       array(
         'facet' => $facet,
-        'value' => $value
+        'adapter' => $this->adapter,
+        'value' => $value,
       )
     );
   }
