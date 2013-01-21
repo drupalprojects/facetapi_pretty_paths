@@ -42,6 +42,11 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
   protected $fullPath = NULL;
 
   /**
+   * The base path for constructing pretty facet paths.
+   */
+  protected $basePath = NULL;
+
+  /**
    * Constructor, sets adapter.
    *
    * @param FacetapiAdapter $adapter
@@ -58,9 +63,6 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
    * Overrides FacetapiUrlProcessorStandard::fetchParams().
    */
   public function fetchParams() {
-    $this->fullPath = $_GET['q'];
-
-    $this->filterParams = array();
 
     // Skip pretty paths logic for admin pages, as
     // for pretty paths, we have to manipulate $_GET['q].
@@ -69,11 +71,11 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
       return $_GET;
     }
 
-    // Pretty paths are expected to be in form "search/url/segment1/segment2/".
-    // Remove /search/url part and prepare args for iteration.
-    $item = menu_get_item();
-    $args = array_slice(arg(), $item['number_parts']);
+    $this->fullPath = $_GET['q'];
+    $this->filterParams = array();
     $facets = $this->adapter->getEnabledFacets();
+
+    $args = explode('/', $_GET['q']);
 
     // Traverse all segments "<alias>/<value>" from right to left (array_pop).
     while (($value = array_pop($args)) !== NULL) {
@@ -108,6 +110,9 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
       }
     }
 
+    // Set the rest of the url as the search basePath.
+    $this->basePath = implode('/', $args);
+
     // Since we traversed all segments from right to left we need to reverse
     // them here. Reason is because the order matters for some facets.
     $this->pathSegments = array_reverse($this->pathSegments);
@@ -115,6 +120,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
 
     // Return params as expected.
     $params = $_GET;
+    $params['q'] = $this->basePath;
     $params[$this->filterKey] = $this->filterParams;
     return $params;
   }
@@ -170,7 +176,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
       // Sort to avoid multiple urls with duplicate content.
       ksort($segments);
     }
-    $path = $this->adapter->getSearchPath();
+    $path = $this->getBasePath();
     // Add all path segments.
     foreach ($segments as $key => $segment) {
       $this->encodePathSegment($segment, $segment['facet']);
@@ -263,7 +269,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
     // Adds the current search to the query.
     if ($keys) {
       // The last item should be text, not a link.
-      $breadcrumb[] = $active_items ? l($keys, $item['href'], array('query' => $query)) : check_plain($keys);
+      $breadcrumb[] = $active_items ? l($keys, $this->getBasePath(), array('query' => $query)) : check_plain($keys);
     }
 
     // Use this to track the active facet trail.
@@ -297,6 +303,19 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
 
   public function getFullPath() {
     return $this->fullPath;
+  }
+
+  public function getBasePath() {
+    $basePath = $this->basePath;
+    // Mimic search api base path logic which allows to set a custom base path.
+    // @see SearchApiFacetapiAdapter::getSearchPath().
+    if ($this->adapter instanceof SearchApiFacetapiAdapter) {
+      $search = $this->adapter->getCurrentSearch();
+      if ($search && $search[0]->getOption('search_api_base_path')) {
+        $basePath = $search[0]->getOption('search_api_base_path');
+      }
+    }
+    return $basePath;
   }
 
 }
