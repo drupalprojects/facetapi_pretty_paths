@@ -193,7 +193,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
     return array(
       'alias' => $pretty_paths_alias,
       'value' => $value,
-      'facet' => &$facet,
+      'facet' => $facet,
       'key' => $pretty_paths_alias . "_" . $value,
     );
   }
