@@ -309,7 +309,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
     $basePath = $this->basePath;
     // Mimic search api base path logic which allows to set a custom base path.
     // @see SearchApiFacetapiAdapter::getSearchPath().
-    if ($this->adapter instanceof SearchApiFacetapiAdapter) {
+    if (module_exists('search_api_facetapi') && $this->adapter instanceof SearchApiFacetapiAdapter) {
       $search = $this->adapter->getCurrentSearch();
       if ($search && $search[0]->getOption('search_api_base_path')) {
         $basePath = $search[0]->getOption('search_api_base_path');
