@@ -80,6 +80,8 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
     // Traverse all segments "<alias>/<value>" from right to left (array_pop).
     while (($value = array_pop($args)) !== NULL) {
       if (!($alias = array_pop($args))) {
+        // Restore last url part, if this was an incomplete segment.
+        array_push($args, $value);
         break;
       }
       $found = FALSE;
