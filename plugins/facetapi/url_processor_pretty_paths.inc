@@ -90,8 +90,6 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
 
     // Mock default parameters for facetapi & related search modules.
     if (!empty($params)) {
-      // Set search base path.
-      $_GET['q'] = $item['href'];
       // Set query params.
       $_GET[$this->filterKey] = $params;
     }
