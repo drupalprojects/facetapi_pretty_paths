@@ -44,7 +44,7 @@ function facetapi_pretty_paths_facetapi_searcher_info_alter(array &$searcher_inf
  *
  * Implements hook_form_BASE_FORM_ID_alter().
  */
-function facetapi_pretty_paths_form_facetapi_facet_display_form_alter(&$form, &$form_state, $form_id) {
+function facetapi_pretty_paths_form_facetapi_facet_display_form_alter(&$form, &$form_state) {
   if (!user_access('administer facetapi pretty paths')) {
     return;
   }

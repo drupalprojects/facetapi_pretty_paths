@@ -1,5 +1,5 @@
 name = Facet API Pretty Paths
-core = 7.x
+core = 6.x
 description = "Enables pretty paths for searches with Facet API."
 
 dependencies[] = facetapi
