@@ -69,7 +69,7 @@ function facetapi_pretty_paths_form_facetapi_facet_display_form_alter(&$form, &$
  */
 function facetapi_pretty_paths_menu() {
   $items = array();
-  $items['admin/config/search/facetapi_pretty_paths'] = array(
+  $items['admin/settings/facetapi_pretty_paths'] = array(
     'title' => 'FacetAPI Pretty Paths',
     'description' => 'Configure pretty paths settings',
     'page callback' => 'drupal_get_form',
