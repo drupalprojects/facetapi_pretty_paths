@@ -5,6 +5,9 @@
  * The FacetAPI Pretty Paths module.
  */
 
+// Include the pretty paths url processor class.
+require_once dirname(__FILE__) . '/plugins/facetapi/url_processor_pretty_paths.inc';
+
 /**
  * Implements hook_facetapi_url_processors().
  */

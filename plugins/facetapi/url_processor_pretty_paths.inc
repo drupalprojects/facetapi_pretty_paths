@@ -1,5 +1,9 @@
 <?php
 
+// Include the facetapi url processor class.
+require_once drupal_get_path('module', 'facetapi') . '/plugins/facetapi/url_processor.inc';
+require_once drupal_get_path('module', 'facetapi') . '/plugins/facetapi/url_processor_standard.inc';
+
 /**
  * @file
  * A custom URL processor for pretty paths.
