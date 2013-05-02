@@ -34,7 +34,7 @@ function facetapi_pretty_paths_facetapi_searcher_info_alter(array &$searcher_inf
   foreach ($searcher_info as &$info) {
     // Activate pretty paths optionally per searcher, as configured.
     $id = 'facetapi_pretty_paths_searcher_' . $info['name'];
-    $info['url processor'] = variable_get($id) ? 'pretty_paths' : 'standard';
+    $info['url processor'] = variable_get($id, NULL) ? 'pretty_paths' : 'standard';
     $info['facetapi pretty paths coder'] = 'default';
   }
 }
