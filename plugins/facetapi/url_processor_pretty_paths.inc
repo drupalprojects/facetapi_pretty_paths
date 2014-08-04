@@ -150,6 +150,7 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
   public function getFacetPath(array $facet, array $values, $active) {
     $segments = $this->pathSegments;
     $active_items = $this->adapter->getActiveItems($facet);
+    $settings = $this->adapter->getFacetSettingsGlobal($facet);
 
     // Adds to segments if inactive, removes if active.
     foreach ($values as $value) {
@@ -159,6 +160,14 @@ class FacetapiUrlProcessorPrettyPaths extends FacetapiUrlProcessorStandard {
       }
       elseif (!$active) {
         $segments[$segment['key']] = $segment;
+      }
+    }
+
+    // If Facet API supports limiting active items, remove path segments. See http://drupal.org/node/1393928
+    if (count($active_items) && isset($settings->settings['limit_active_items']) && $settings->settings['limit_active_items']) {
+      foreach ($active_items as $active_item) {
+        $segment = $this->getPathSegment($facet, $active_item['value']);
+        unset($segments[$segment['key']]);
       }
     }
 
