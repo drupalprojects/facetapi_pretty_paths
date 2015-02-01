@@ -293,18 +293,33 @@ function facetapi_pretty_paths_facetapi_pretty_paths_coders() {
  * Implements hook_facetapi_facet_info_alter().
  */
 function facetapi_pretty_paths_facetapi_facet_info_alter(array &$facet_info, array $searcher_info) {
-  // Loading the adapter within hook_facetapi_facet_info_alter() is evil as it
-  // already builds the facet settings and statically caches them, without
-  // including our alterations. Thus we have to clear the static cache of
-  // facetapi_get_enabled_facets() at the end.
-  $adapter = facetapi_adapter_load($searcher_info['name']);
+  /*
+   * In order to get settings for a facet normally we would need to
+   * load the adapter for a given searcher. However doing so with
+   * facetapi_adapter_load() causes the adapter class in context
+   * to be instantiated which in the case of this module results
+   * in the fetchParams method of the FacetapiUrlProcessorPrettyPaths
+   * class being called which results in active facets in the URL
+   * being processed before the logic below can alter the facet
+   * settings.
+   *
+   * The normal way to get facet settings would be via the adapter
+   * class using getFacetSettings() and/or getFacetSettingsGlobal().
+   * Instead we have to use the raw settings getter function below.
+   */
+  $searcher_settings = facetapi_get_searcher_settings($searcher_info['name']);
 
   foreach ($facet_info as &$facet) {
     $taxonomy_coder = 'taxonomy';
-    $facet_settings = $adapter->getFacetSettingsGlobal($facet);
-    if (module_exists('pathauto') && !empty($facet_settings->settings['pretty_paths_taxonomy_pathauto'])) {
-      $taxonomy_coder = 'taxonomy_pathauto';
+
+    $facet_settings_key = $searcher_info['name'] . '::' . $facet['field'];
+    if (isset($searcher_settings[$facet_settings_key]) && isset($searcher_settings[$facet_settings_key]->settings)) {
+      $facet_settings = $searcher_settings[$facet_settings_key];
+      if (module_exists('pathauto') && !empty($facet_settings->settings['pretty_paths_taxonomy_pathauto'])) {
+        $taxonomy_coder = 'taxonomy_pathauto';
+      }
     }
+
     // Check for Apache Solr Taxonomy Term fields.
     if (!empty($facet['map options']['module_name']) && $facet['map options']['module_name'] == 'Taxonomy') {
       $facet['facetapi pretty paths coder'] = $taxonomy_coder;
